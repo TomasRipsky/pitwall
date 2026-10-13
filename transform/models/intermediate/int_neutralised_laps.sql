@@ -4,17 +4,23 @@ with messages as (
         session_key,
         recorded_at,
         lap_number,
+        -- The source words these messages by hand and the wording drifts: the Virtual Safety Car
+        -- is "VIRTUAL SAFETY CAR ..." in some sessions and "VSC ..." in others.
         case message
             when 'SAFETY CAR DEPLOYED' then 'SC'
             when 'VIRTUAL SAFETY CAR DEPLOYED' then 'VSC'
+            when 'VSC DEPLOYED' then 'VSC'
         end as started,
         case message
             when 'SAFETY CAR IN THIS LAP' then 'SC'
             when 'VIRTUAL SAFETY CAR ENDING' then 'VSC'
+            when 'VSC ENDING' then 'VSC'
         end as ended,
-        coalesce(flag = 'RED', false) as is_red_flag
+        -- A stopped race is a RED flag message through 2025, always with "SESSION ABORTED" in the
+        -- same second; from 2026 only "SESSION ABORTED" is sent. Either one is a red flag.
+        coalesce(flag = 'RED', false) or message = 'SESSION ABORTED' as is_red_flag
     from {{ ref('stg_openf1__race_control') }}
-    where category = 'SafetyCar' or flag = 'RED'
+    where category = 'SafetyCar' or flag = 'RED' or message = 'SESSION ABORTED'
 ),
 
 starts as (

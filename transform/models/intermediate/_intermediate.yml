@@ -147,6 +147,31 @@ unit_tests:
         - {session_key: 4, lap_number: 12, neutralisation: SC}
         - {session_key: 4, lap_number: 13, neutralisation: SC}
 
+  - name: test_2026_wording_session_aborted_and_short_vsc
+    model: int_neutralised_laps
+    given:
+      - input: ref('stg_openf1__race_control')
+        rows:
+          # session 5 (Monza 2026): the source sends no RED flag any more — a stopped race is only
+          # "SESSION ABORTED". The Safety Car before it must close there, not run to the last lap.
+          - {session_key: 5, recorded_at: "2026-09-06 13:06:49", lap_number: 3, category: SafetyCar, flag: null, message: SAFETY CAR DEPLOYED}
+          - {session_key: 5, recorded_at: "2026-09-06 13:09:30", lap_number: 4, category: SessionStatus, flag: null, message: SESSION ABORTED}
+          - {session_key: 5, recorded_at: "2026-09-06 13:34:10", lap_number: 4, category: SessionStatus, flag: null, message: SESSION STARTED}
+          # the Virtual Safety Car in its short wording
+          - {session_key: 5, recorded_at: "2026-09-06 14:17:45", lap_number: 28, category: SafetyCar, flag: null, message: VSC DEPLOYED}
+          - {session_key: 5, recorded_at: "2026-09-06 14:19:31", lap_number: 29, category: SafetyCar, flag: null, message: VSC ENDING}
+      - input: ref('stg_openf1__laps')
+        rows:
+          - {session_key: 5, lap_number: 53}
+    expect:
+      # SC on laps 3-4 only (the red-flag lap closes it), RED on lap 4, VSC on laps 28-29; never 5-27 or 30-53
+      rows:
+        - {session_key: 5, lap_number: 3, neutralisation: SC}
+        - {session_key: 5, lap_number: 4, neutralisation: SC}
+        - {session_key: 5, lap_number: 4, neutralisation: RED}
+        - {session_key: 5, lap_number: 28, neutralisation: VSC}
+        - {session_key: 5, lap_number: 29, neutralisation: VSC}
+
   - name: test_laps_get_tyres_pits_positions_and_clean_flag
     model: int_laps_enriched
     given:
