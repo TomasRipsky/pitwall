@@ -11,7 +11,9 @@ Evidence line (40.x), whose connector supported ADC, has had no release since Fe
 the repository moved to the new product.
 
 ## Decision
-Observable Framework, as the lab site (lab ADR 0005). pitwall's pages read Parquet files written by
+Observable Framework, as the lab site (lab ADR 0005). *Since 2026-10-13 pitwall lives in its own
+repository and the site is this repository's own GitHub Pages site (lab ADR 0007); the decision
+and the export contract are unchanged.* pitwall's pages read Parquet files written by
 `pitwall site-export`, which runs as the read-only dashboard account in prod.
 
 ## Alternatives considered

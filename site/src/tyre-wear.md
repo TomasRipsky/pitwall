@@ -1,11 +1,10 @@
 ---
 title: Tyre wear
-style: pitwall.css
 ---
 
 ```js
 import "./components/fonts.js";
-import {rows} from "../components/lab.js";
+import {rows} from "./components/lab.js";
 import {compoundColor, tyre, tyreLegend} from "./components/f1.js";
 const wear = rows(await FileAttachment("data/tyre_wear.parquet").parquet());
 const stints = rows(await FileAttachment("data/stints.parquet").parquet());
