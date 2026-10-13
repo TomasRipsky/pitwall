@@ -66,8 +66,8 @@ export function labelledPeriods(list) {
   return kept;
 }
 
-/** Team colour from the source (hex without the hash); grey when missing. */
-export const teamColor = (hex) => (hex ? `#${hex}` : "#8a8a9a");
+/** Team colour as the source gives it ("#27F4D2"); grey when missing. */
+export const teamColor = (hex) => hex || "#8a8a9a";
 
 /** A dot in the team's colour followed by the name: colour never carries identity alone. */
 export function teamDot(name, hex) {

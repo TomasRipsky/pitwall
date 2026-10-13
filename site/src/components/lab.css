@@ -63,9 +63,9 @@ p { margin: 0 0 1em; }
 
 /* sticky bar ---------------------------------------------------------------- */
 .top {
-  position: sticky; top: 0; z-index: 20; min-height: var(--lab-top);
+  position: sticky; top: 0; z-index: 20; box-sizing: border-box; height: var(--lab-top); margin: 0;
   display: flex; align-items: center; justify-content: space-between; gap: 1rem;
-  padding: 0.55rem 1.25rem;
+  padding: 0 1.25rem;
   background: color-mix(in srgb, var(--lab-bg) 86%, transparent); backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--lab-line);
 }
@@ -108,8 +108,9 @@ p { margin: 0 0 1em; }
 .tile b { display: block; font: 700 2rem/1.1 var(--lab-display); font-variant-numeric: tabular-nums; }
 .tile span { font-size: 0.82rem; color: var(--lab-muted); }
 .controls { display: flex; flex-wrap: wrap; gap: 0.4rem 1.6rem; align-items: center; margin-bottom: 1rem; font-size: 0.9rem; }
-.controls form { margin: 0; width: auto; max-width: none; }
-.controls form > label { width: auto; margin-right: 0.5rem; color: var(--lab-muted); }
+/* Framework gives every input form a fixed width and a 120px label: undo both inside our bars */
+.controls form, .filters form { margin: 0; width: auto !important; max-width: none !important; }
+.controls form > label, .filters form > label { width: auto !important; margin-right: 0.5rem; color: var(--lab-muted); }
 .legend { display: flex; flex-wrap: wrap; gap: 0.3rem 1.1rem; align-items: center; margin: 0 0 0.6rem; font-size: 0.82rem; color: var(--lab-soft); }
 .legend span { display: inline-flex; align-items: center; gap: 0.35rem; }
 .swatch { display: inline-block; width: 0.75rem; height: 0.75rem; border-radius: 3px; }
@@ -153,8 +154,6 @@ a.btn.ghost, button.btn.ghost { background: transparent; color: var(--lab-accent
   padding: 0.55rem 1.25rem; background: color-mix(in srgb, var(--lab-bg-alt) 94%, transparent); backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--lab-line); font-size: 0.85rem;
 }
-.filters form { margin: 0; width: auto; max-width: none; }
-.filters form > label { width: auto; margin-right: 0.5rem; color: var(--lab-muted); }
 .filters form select { max-width: 11rem; }
 .bi-head { padding-top: 2.5rem; padding-bottom: 2.5rem; }
 .bi-head h1 { font-size: clamp(1.7rem, 4vw, 2.6rem); margin-bottom: 0.4em; }

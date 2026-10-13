@@ -79,7 +79,9 @@ its limits after it. No F1 knowledge is assumed: terms are explained where they 
 
 ## 5. The BI page (`site/src/bi.md`)
 
-DuckDB in the browser over the same Parquet files. A sticky filter bar — **season, session
+The same Parquet files, filtered in the browser. *(Revised while building: the first draft said
+DuckDB-WASM, as CityPulse uses; pitwall's tables are small enough to filter in memory, which gives
+the same page without shipping a query engine — ADR 0008.)* A sticky filter bar — **season, session
 (Race/Sprint), circuit, team** — drives everything; where a number cannot follow a filter it says so.
 
 KPIs (races, laps, pit stops, median pit-lane time under green, median stationary time, undercut

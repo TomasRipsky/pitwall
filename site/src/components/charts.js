@@ -132,6 +132,8 @@ export function lapChart({drivers, laps, stops = [], racePeriods = [], highlight
   for (const d of drivers) if (d.grid_position != null) data.push({driver_number: d.driver_number, lap_number: 0, position: d.grid_position});
   for (const l of laps) if (l.position != null && byNumber.has(l.driver_number)) data.push(l);
   if (!data.length) return null;
+  // a line is drawn in data order: each driver's laps must be consecutive and ascending
+  data.sort((a, b) => a.driver_number - b.driver_number || a.lap_number - b.lap_number);
   const who = (d) => byNumber.get(d.driver_number);
   const maxPos = Math.max(d3.max(data, (d) => d.position), drivers.length);
   const lastLap = d3.max(data, (d) => d.lap_number);

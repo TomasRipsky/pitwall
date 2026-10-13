@@ -7,7 +7,7 @@ export function car({livery = "#e10600"} = {}) {
     <defs>
       <linearGradient id="pw-livery" x1="0" x2="1" y1="0" y2="0">
         <stop offset="0" stop-color="#7a0300"/>
-        <stop offset="0.45" stop-color=${livery}/>
+        <stop offset="0.45" stop-color=${livery} />
         <stop offset="1" stop-color="#ff3b30"/>
       </linearGradient>
       <linearGradient id="pw-speed" x1="0" x2="1">
@@ -77,7 +77,7 @@ export function pipelineLap(stages) {
     <path class="tarmac" d=${track} />
     <path class="kerbs" d="M820 350 Q900 350 900 270 M900 160 Q900 80 820 80 M180 80 Q100 80 100 160 M100 270 Q100 350 180 350"/>
     <path class="centre" d=${track} />
-    <g transform="translate(150 335)">${[0, 1, 2, 3].flatMap((c) => [0, 1, 2].map((r) => svg`<rect x=${c * 7} y=${r * 10} width="7" height="10" fill=${(c + r) % 2 ? "#0b0b10" : "#f0f0f0"}/>`))}</g>
+    <g transform="translate(150 335)">${[0, 1, 2, 3].flatMap((c) => [0, 1, 2].map((r) => svg`<rect x=${c * 7} y=${r * 10} width="7" height="10" fill=${(c + r) % 2 ? "#0b0b10" : "#f0f0f0"} />`))}</g>
     ${stages.map(([name, detail], i) => svg`<g transform="translate(${at[i][0]} ${at[i][1]})">
       <circle class="stop" r="15"/><text class="sector" y="4.5">${i + 1}</text>
       <text x=${label[i][0]} y=${label[i][1]} text-anchor=${label[i][2]}>${name}</text>

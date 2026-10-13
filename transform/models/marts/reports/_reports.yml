@@ -68,7 +68,7 @@ models:
       - name: winner_team
         description: Winner's team.
       - name: winner_team_colour_hex
-        description: Winner's team colour (hex, no leading hash).
+        description: Winner's team colour (hex with its leading "#").
       - name: winner_grid_position
         description: Where the winner started. Null when the grid was not published.
 
@@ -110,7 +110,7 @@ models:
       - name: team_name
         description: Team in this session.
       - name: team_colour_hex
-        description: Team colour (hex, no leading hash).
+        description: Team colour (hex with its leading "#").
       - name: grid_position
         description: Starting position. Null when the grid was not published.
       - name: finish_position
@@ -202,7 +202,7 @@ models:
       - name: team_name
         description: Team in this session.
       - name: team_colour_hex
-        description: Team colour (hex, no leading hash).
+        description: Team colour (hex with its leading "#").
       - name: compound
         description: "{{ doc('compound') }}"
       - name: first_lap
@@ -253,7 +253,7 @@ models:
       - name: team_name
         description: Team in this session.
       - name: team_colour_hex
-        description: Team colour (hex, no leading hash).
+        description: Team colour (hex with its leading "#").
       - name: pit_lane_time_s
         description: Time from pit entry to pit exit, in seconds. Null for inferred stops.
       - name: stationary_time_s

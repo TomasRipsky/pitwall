@@ -16,7 +16,14 @@ import {lapChart, strategyChart} from "./components/charts.js";
 // computed from these rows, in the browser.
 const races = d3.sort(rows(await FileAttachment("data/races.parquet").parquet()), (d) => d.race_date);
 const driverRaces = rows(await FileAttachment("data/driver_races.parquet").parquet());
-const laps = rows(await FileAttachment("data/laps.parquet").parquet());
+// 100 000 laps: kept as an Arrow table and read one race at a time, instead of 100 000 objects up front.
+const lapsTable = await FileAttachment("data/laps.parquet").parquet();
+const lapSession = lapsTable.getChild("session_key").toArray();
+function lapsOf(sessionKey) {
+  const out = [];
+  for (let i = 0; i < lapSession.length; ++i) if (lapSession[i] === sessionKey) out.push(lapsTable.get(i).toJSON());
+  return out;
+}
 const stints = rows(await FileAttachment("data/stints.parquet").parquet());
 const stops = rows(await FileAttachment("data/pit_stops.parquet").parquet());
 const wear = rows(await FileAttachment("data/tyre_wear.parquet").parquet());
@@ -71,7 +78,7 @@ const raceView = {
   drivers: raceDrivers,
   stints: stints.filter(inRace),
   stops: stops.filter(inRace),
-  laps: laps.filter(inRace),
+  laps: lapsOf(race.session_key),
   racePeriods: periods(neutralised.filter(inRace))
 };
 const resultTable = Inputs.table(
@@ -317,7 +324,8 @@ const winsFrom = d3.rollups(withGrid, (v) => v.length, (d) => Math.min(d.winner_
 function winsChart(width) {
   return Plot.plot({
     width,
-    height: 250,
+    height: 270,
+    marginTop: 34,
     marginBottom: 42,
     style: {background: "transparent", fontSize: "12px"},
     x: {label: "Where the winner started", labelAnchor: "center", labelOffset: 36, type: "band", domain: [1, 2, 3, 4, 5, 6], tickFormat: (p) => (p === 6 ? "P6 or lower" : `P${p}`), paddingInner: 0.45},
@@ -340,7 +348,8 @@ const caseRace = d3.greatest(withGrid, (d) => d.winner_grid_position);
 const inCase = (d) => d.session_key === caseRace.session_key;
 const caseDrivers = d3.sort(driverRaces.filter(inCase), (d) => d.finish_position ?? 99);
 const hero = caseDrivers.find((d) => d.driver_number === caseRace.winner_driver_number);
-const heroLaps = d3.sort(laps.filter((d) => inCase(d) && d.driver_number === hero.driver_number && d.position != null), (d) => d.lap_number);
+const caseLaps = lapsOf(caseRace.session_key);
+const heroLaps = d3.sort(caseLaps.filter((d) => d.driver_number === hero.driver_number && d.position != null), (d) => d.lap_number);
 const caseStops = stops.filter(inCase);
 const heroStops = d3.sort(caseStops.filter((d) => d.driver_number === hero.driver_number), (d) => d.lap_number);
 const casePeriods = periods(neutralised.filter(inCase));
@@ -349,7 +358,7 @@ const lastNotLeading = heroLaps.findLast((d) => d.position !== 1);
 const afterLapOne = heroLaps.find((d) => d.lap_number === 1);
 const kinds = {SC: "the Safety Car", VSC: "the Virtual Safety Car", RED: "a red flag"};
 const interruptions = casePeriods.map((p) => `${kinds[p.type]} (${p.from === p.to ? `lap ${p.from}` : `laps ${p.from}–${p.to}`})`);
-const caseView = {drivers: caseDrivers, laps: laps.filter(inCase), stops: caseStops, racePeriods: casePeriods, highlight: hero.driver_number};
+const caseView = {drivers: caseDrivers, laps: caseLaps, stops: caseStops, racePeriods: casePeriods, highlight: hero.driver_number};
 ```
 
 <header class="top">
@@ -375,7 +384,7 @@ const caseView = {drivers: caseDrivers, laps: laps.filter(inCase), stops: caseSt
       <p class="lede">The fastest car does not always win. Teams decide which tyres to fit and when to stop for new ones, and a good call is worth more than raw speed. pitwall downloads every Formula 1 race, models it, and turns it into answers anyone can follow — no F1 knowledge needed.</p>
       <div class="stats" aria-live="polite">
         <div class="stat"><b>${fmt.count(races.length)}</b><span>races and sprints, ${seasons[0]}–${seasons[1]}</span></div>
-        <div class="stat"><b>${fmt.count(laps.length)}</b><span>laps, one row each</span></div>
+        <div class="stat"><b>${fmt.count(lapsTable.numRows)}</b><span>laps, one row each</span></div>
         <div class="stat"><b>${fmt.count(stops.length)}</b><span>pit stops</span></div>
         <div class="stat"><b>${latest.circuit_short_name}</b><span>latest: ${latest.meeting_name}, ${fmt.date(latest.race_date)}</span></div>
       </div>
@@ -624,7 +633,7 @@ const caseView = {drivers: caseDrivers, laps: laps.filter(inCase), stops: caseSt
       <h3>What is checked</h3>
       <ul class="check yes">
         <li><b>Over 70 Python tests</b> run without network or cloud: the extractor is tested against recorded answers of the real API.</li>
-        <li><b>Over 130 dbt tests</b>: keys are unique, references exist, values are in range, and the racing rules (what counts as an undercut, how wear is measured) are pinned by unit tests.</li>
+        <li><b>Over 110 dbt tests</b>: keys are unique, references exist, values are in range, and the racing rules (what counts as an undercut, how wear is measured) are pinned by unit tests.</li>
         <li><b>Every pull request</b> builds the models in throwaway datasets and builds this site before it can merge.</li>
         <li><b>Rows that fail</b> a data-quality rule are stored in an audit dataset, so a warning can be inspected instead of guessed at.</li>
       </ul>
