@@ -434,13 +434,23 @@ The `attribute_condition` ([`iam.tf`](../infra/gcp/iam.tf)) is the guest list, c
 
 | Clause | Blocks |
 |---|---|
-| `repository_id == '1396373223'` | every other GitHub repository in the world. Without a condition, *any* repo could exchange tokens here. The numeric ID, not the name: a deleted repo's name can be re-registered by someone else, its ID can't |
+| `repository_id == '1417739900'` | every other GitHub repository in the world. Without a condition, *any* repo could exchange tokens here. The numeric ID, not the name: a deleted repo's name can be re-registered by someone else, its ID can't |
 | `workflow_ref.startsWith('…/.github/workflows/pitwall-')` | other workflows in the same repo (a future project's CI can't act as pitwall) |
 | `event_name != 'pull_request_target'` | a trigger that runs with the base repo's privileges on a PR's context — the classic way forks steal CI secrets |
 | prod: `environment == 'prod'` | any job not running in the GitHub Environment `prod` |
 | prod: `ref in ['refs/heads/dev', 'refs/heads/main']` | runs triggered from any other branch. `dev` is allowed because the Monday cron always starts on the default branch (`dev`) and *then* checks out `main`; the token carries the triggering ref |
 
 **Defense in depth.** The GitHub Environment `prod` has its own rule: only `dev` and `main` may deploy to it. So prod is guarded twice, by GitHub (who may enter the environment) and by GCP (what the token must say). Either one alone would be a single point of failure.
+
+**The trust names one repository — what happened when pitwall moved (2026-10-13).** pitwall was built inside the Data Engineering Lab's monorepo (repository ID `1396373223`) and moved to this repository (`1417739900`) with its history. Because the guest list is written against the repository, the whole cloud side of the move was two Terraform variable defaults (`github_repository`, `github_repository_id` in [`variables.tf`](../infra/gcp/variables.tf)) and one `make apply` per environment:
+
+- the provider's `attribute_condition` was **updated in place**;
+- the `workloadIdentityUser` binding on each service account was **replaced** (IAM members are immutable: one destroy plus one add each) — dev `1 add, 1 change, 1 destroy`; prod `2 add, 1 change, 2 destroy`, because prod also has the dashboard account;
+- nothing that holds data was in the plan. Reading the plan for exactly that came before applying.
+
+Three things worth remembering from it. **The ID did its job:** the moment the condition changed, the old repository could no longer get a token, even though it still contained the same workflows. **IAM is not instant:** the first CI run here, about a minute after the dev apply, passed the token exchange and then failed in 12–20 s with `iam.serviceAccounts.getAccessToken denied`; the identical re-run passed — so prod was applied well before the release that triggers its pipeline. **GitHub's half does not travel with the code:** the `dev`/`prod` Environments, their branch rules and variables, and the Pages environment were recreated here (`make gh-vars ENV=…` republishes the variables). The workflow files kept their `pitwall-` names on purpose, so the second clause of the guest list stayed true.
+
+**In short.** GCP does not trust "GitHub"; it trusts *this repository's* number, *these* workflow files, and for prod *that* environment and branch. Move any of them and the door closes until the infrastructure is re-applied — which is the point.
 
 **Least privilege, also inside the workflows:** only jobs that talk to GCP get `id-token: write`. The jobs that run `npm` (the site build) don't: a malicious npm package there can't mint a GCP token. Fork PRs can't mint tokens at all, so their cloud jobs are skipped.
 
@@ -857,6 +867,7 @@ The Makefile is the shared contract: CI and prod call the same `make` targets yo
 | Degradation looks negative or zero on hard tyres | Fuel burn makes cars ~0.03–0.06 s/lap faster, hiding wear (and drying tracks on intermediates) | Expected: read the fuel-corrected curve on the site; the raw slope is documented as biased |
 | Sprint `grid_position` is null for a new season | OpenF1 renamed the sprint qualifying session again (it was "Sprint Shootout" in 2023) | Add the new name to the `case` in `fct_session_results` and to its unit test |
 | Tests green but the pipeline warns "dropping columns not in the contract" or "contract fields absent from every record" | OpenF1 added or renamed a field; the recordings are older than the change | Follow "When OpenF1 changes" in the tests section: re-record, read the diff, decide per field |
+| Every cloud job fails in seconds with `getAccessToken denied` or `unauthorized_client` | The repository was moved or recreated (new `repository_id`), a workflow file no longer starts with `pitwall-`, or an IAM apply has not propagated yet | Re-run once; if it persists, check `github_repository_id` in `variables.tf` against `gh api repos/TomasRipsky/pitwall -q .id`, then `make apply` and `make gh-vars` |
 | The Monday run didn't happen | Scheduled workflows are disabled after 60 days without repo activity, `PITWALL_SCHEDULE` isn't `on`, or GitHub delayed the cron | Actions tab → re-enable; check the variable; run it by hand (`mode=latest`, `env=prod`) |
 | Prod's Monday run broke right after a merge into `dev`, with no release | The cron uses the workflow file from the default branch (`dev`), even though it checks out `main`'s code | Fix the workflow on `dev`; treat workflow changes as prod changes |
 | CI's dbt job fails with "Not found: Dataset … raw" or zero rows everywhere | Dev's `raw` is empty (fresh environment, or after `make destroy`) | Ingest at least one season into dev, then `make load ENV=dev` |
