@@ -1,6 +1,6 @@
 """Record trimmed OpenF1 responses for the integration tests. Dev tool: hits the real API.
 
-Run from projects/pitwall:  uv run python tests/record_fixtures.py
+Run from the repository root:  uv run python tests/record_fixtures.py
 """
 
 import json

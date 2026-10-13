@@ -1,7 +1,7 @@
-"""Data for the lab site's pitwall section: query the marts, write browser-friendly Parquet.
+"""Data for the site: query the marts, write browser-friendly Parquet.
 
 The site never queries BigQuery itself: `pitwall site-export` writes these files into
-`site/src/pitwall/data/` before the site is built (lab ADR 0005).
+`site/src/data/` before the site is built (ADR 0007).
 """
 
 from __future__ import annotations

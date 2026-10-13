@@ -34,7 +34,7 @@ def main(
     selector.add_argument("--meeting", type=int, metavar="MEETING_KEY", help="one Grand Prix")
     selector.add_argument("--season", type=int, metavar="YEAR", help="backfill a whole season")
     commands.add_parser("load", help="rebuild BigQuery raw tables from the lake")
-    site = commands.add_parser("site-export", help="write the lab site's pitwall data files")
+    site = commands.add_parser("site-export", help="write the site's data files")
     site.add_argument("--out", required=True, help="directory to write the Parquet files into")
     args = parser.parse_args(argv)
 
