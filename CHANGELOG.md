@@ -5,6 +5,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+### Fixed
+- Safety Car periods no longer run to the end of the race when a red flag follows them in 2026 data:
+  the source stopped sending red flags as flags and only reports `SESSION ABORTED`, which the model
+  now reads as a red flag (Monte Carlo, Zandvoort and Monza 2026 were affected — Monza showed 51 of
+  53 laps under the Safety Car). Virtual Safety Car periods announced as `VSC DEPLOYED` / `VSC ENDING`
+  (10 sessions) are recognised. A new warning test lists any Safety Car message the models do not know.
+
 ## [1.0.0] - 2026-10-13
 
 The first release of pitwall as its own repository. Nothing changes in what the pipeline does or shows.

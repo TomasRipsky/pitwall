@@ -4,10 +4,13 @@ models:
   - name: int_neutralised_laps
     description: >
       Grain: one row per session, lap and neutralisation type. A period starts with
-      "(VIRTUAL) SAFETY CAR DEPLOYED" and ends on the lap of "SAFETY CAR IN THIS LAP" or
-      "VIRTUAL SAFETY CAR ENDING". A period with no end message stops at the next
-      interruption: a red flag (whose lap still counts) or a new deployment of either type (whose
-      lap does not), otherwise at the session's last lap. A red-flag lap is also listed as RED.
+      "SAFETY CAR DEPLOYED" or "VIRTUAL SAFETY CAR DEPLOYED" / "VSC DEPLOYED" and ends on the lap of
+      "SAFETY CAR IN THIS LAP" or "VIRTUAL SAFETY CAR ENDING" / "VSC ENDING". A period with no end
+      message stops at the next interruption: a red flag (whose lap still counts) or a new
+      deployment of either type (whose lap does not), otherwise at the session's last lap. A red
+      flag is a RED flag message or "SESSION ABORTED" (the only one sent from 2026); its lap is
+      also listed as RED. The source words these by hand: two warning tests watch for wordings
+      the model does not know and for races that come out mostly neutralised.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
@@ -146,6 +149,41 @@ unit_tests:
         - {session_key: 4, lap_number: 11, neutralisation: SC}
         - {session_key: 4, lap_number: 12, neutralisation: SC}
         - {session_key: 4, lap_number: 13, neutralisation: SC}
+
+  - name: test_2026_wording_session_aborted_and_short_vsc
+    model: int_neutralised_laps
+    given:
+      - input: ref('stg_openf1__race_control')
+        rows:
+          # session 5 (Monza 2026): the source sends no RED flag any more — a stopped race is only
+          # "SESSION ABORTED". The Safety Car before it must close there, not run to the last lap.
+          - {session_key: 5, recorded_at: "2026-09-06 13:06:49", lap_number: 3, category: SafetyCar, flag: null, message: SAFETY CAR DEPLOYED}
+          - {session_key: 5, recorded_at: "2026-09-06 13:09:30", lap_number: 3, category: SessionStatus, flag: null, message: SESSION ABORTED}
+          - {session_key: 5, recorded_at: "2026-09-06 13:34:10", lap_number: 4, category: SessionStatus, flag: null, message: SESSION STARTED}
+          # the Virtual Safety Car in its short wording
+          - {session_key: 5, recorded_at: "2026-09-06 14:17:45", lap_number: 28, category: SafetyCar, flag: null, message: VSC DEPLOYED}
+          - {session_key: 5, recorded_at: "2026-09-06 14:19:31", lap_number: 29, category: SafetyCar, flag: null, message: VSC ENDING}
+          # session 6 (the 2023-2025 shape): the RED flag and SESSION ABORTED arrive within the same
+          # second, on the same lap. Reading both must not add a lap or a second red-flag row.
+          - {session_key: 6, recorded_at: "2024-11-03 15:40:00", lap_number: 30, category: SafetyCar, flag: null, message: SAFETY CAR DEPLOYED}
+          - {session_key: 6, recorded_at: "2024-11-03 15:44:10.250", lap_number: 32, category: Flag, flag: RED, message: RED FLAG}
+          - {session_key: 6, recorded_at: "2024-11-03 15:44:10.500", lap_number: 32, category: SessionStatus, flag: null, message: SESSION ABORTED}
+      - input: ref('stg_openf1__laps')
+        rows:
+          - {session_key: 5, lap_number: 53}
+          - {session_key: 6, lap_number: 69}
+    expect:
+      # session 5: SC and RED on lap 3, VSC on laps 28-29; never 4-27 or 30-53
+      # session 6: SC on laps 30-32, RED on lap 32 once; never 33-69
+      rows:
+        - {session_key: 5, lap_number: 3, neutralisation: SC}
+        - {session_key: 5, lap_number: 3, neutralisation: RED}
+        - {session_key: 5, lap_number: 28, neutralisation: VSC}
+        - {session_key: 5, lap_number: 29, neutralisation: VSC}
+        - {session_key: 6, lap_number: 30, neutralisation: SC}
+        - {session_key: 6, lap_number: 31, neutralisation: SC}
+        - {session_key: 6, lap_number: 32, neutralisation: SC}
+        - {session_key: 6, lap_number: 32, neutralisation: RED}
 
   - name: test_laps_get_tyres_pits_positions_and_clean_flag
     model: int_laps_enriched
