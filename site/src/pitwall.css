@@ -2,7 +2,7 @@
 /* Titillium Web (SIL OFL 1.1) is served by this site and registered by components/fonts.js. */
 @import url("observablehq:default.css");
 @import url("observablehq:theme-near-midnight.css");
-@import url("../components/lab.css");
+@import url("./components/lab.css");
 
 :root {
   --pw-surface: #15151e;

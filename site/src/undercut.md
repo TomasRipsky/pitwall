@@ -1,11 +1,10 @@
 ---
 title: The undercut
-style: pitwall.css
 ---
 
 ```js
 import "./components/fonts.js";
-import {rows, fmt} from "../components/lab.js";
+import {rows, fmt} from "./components/lab.js";
 const attempts = rows(await FileAttachment("data/undercuts.parquet").parquet())
   .filter((d) => d.is_success !== null)
   .map((d) => ({...d, success: d.is_success ? 1 : 0}));

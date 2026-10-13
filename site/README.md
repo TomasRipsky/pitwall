@@ -1,24 +1,21 @@
-# Lab site
+# pitwall site
 
-One GitHub Pages site for the whole lab: https://tomasripsky.github.io/data-engineering-lab/
-(lab ADR 0005). Built with Observable Framework.
+The public dashboard: https://tomasripsky.github.io/pitwall/ — Observable Framework on GitHub Pages
+([ADR 0007](../docs/decisions/0007-observable-framework-for-the-dashboard.md)).
 
-## Adding a project section
+## How it is built
 
-1. **Pages** go in `src/<project>/` (`index.md` + one page per question). Add the section to
-   `observablehq.config.js` and a card to `src/index.md`.
-2. **Data** is exported by the project, never queried from the site: a tested project command
-   writes files into `src/<project>/data/` (git-ignored) before the build — e.g.
-   `pitwall site-export --out site/src/pitwall/data`. Use a read-only identity and export only
-   data you are happy to publish.
-3. **Shared look, own personality.** Everything structural is shared: `src/components/lab.js`
-   (`rows`, `fmt`, palette) and `src/components/lab.css` (cards, big numbers, callouts). Each
-   section then has its **own theme** that makes its domain obvious at a glance — a stylesheet in
-   `src/<project>/` that imports `observablehq:default.css`, a Framework theme and
-   `../components/lab.css`, set on every page with `style:` front matter — plus its own encodings
-   and illustrations in `src/<project>/components/` (e.g. pitwall: dark pit-wall look, tyre and
-   team colours, car/tyre SVGs). Use our own illustrations, never trademarked logos or photos.
-   Design charts with the `dataviz` skill (validated palettes, one axis, legends, tooltips).
+1. **Data is exported, never queried from the site.** `pitwall site-export --out site/src/data`
+   (`make site-data`) writes one Parquet file per chart into `src/data/` (git-ignored) before the
+   build. In production it runs as the read-only dashboard account and exports only data we are
+   happy to publish.
+2. **Pages** are the Markdown files in `src/`; the sidebar is `observablehq.config.js`.
+3. **Look.** `src/components/lab.css` and `lab.js` are the structure every Data Engineering Lab
+   site shares (cards, big numbers, callouts, `rows`, `fmt`). `src/pitwall.css` is pitwall's own
+   theme on top — the dark pit-wall screen, tyre and team colours — with its encodings and
+   illustrations in `src/components/f1.js` and `art.js`. Illustrations are our own: never
+   trademarked logos or photos. Charts follow the `dataviz` skill (validated palettes, one axis,
+   legends, tooltips).
 4. **Page skeleton** (every page):
    - H1 phrased as the question the page answers;
    - `<div class="tip" label="What am I looking at?">` explaining the page in plain language;
@@ -29,6 +26,10 @@ One GitHub Pages site for the whole lab: https://tomasripsky.github.io/data-engi
 
 ## Build and publish
 
-Today pitwall's pipeline exports its data, builds the site and deploys it (`make site` in
-`projects/pitwall`). When a second project needs the site, a lab-level `lab-site` workflow will
-collect every project's export and build once (see lab ADR 0005).
+```bash
+make site-preview   # from the repository root: export dev data, live reload on http://127.0.0.1:3000
+make site           # export + build into site/dist
+```
+
+`pitwall-pipeline` exports from prod, builds and deploys to GitHub Pages after every successful
+production run; `pitwall-ci` builds the site with dev data on every pull request.

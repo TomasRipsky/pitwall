@@ -1,11 +1,10 @@
 ---
 title: About the data
-style: pitwall.css
 ---
 
 ```js
 import "./components/fonts.js";
-import {rows} from "../components/lab.js";
+import {rows} from "./components/lab.js";
 import {pipelineLap} from "./components/art.js";
 const races = rows(await FileAttachment("data/races.parquet").parquet());
 const latest = races.at(-1);
@@ -50,7 +49,7 @@ A **clean lap** excludes the first lap, laps entering or leaving the pits, Safet
 </div>
 </div>
 
-Code, tests and design decisions: [github.com/TomasRipsky/data-engineering-lab](https://github.com/TomasRipsky/data-engineering-lab/tree/main/projects/pitwall).
+Code, tests and design decisions: [github.com/TomasRipsky/pitwall](https://github.com/TomasRipsky/pitwall).
 
 <div class="note">
 

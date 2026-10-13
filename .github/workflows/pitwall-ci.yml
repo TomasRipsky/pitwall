@@ -2,10 +2,6 @@ name: pitwall-ci
 
 on:
   pull_request:
-    paths:
-      - "projects/pitwall/**"
-      - "site/**"
-      - ".github/workflows/pitwall-*.yml"
   workflow_dispatch:
 
 concurrency:
@@ -14,10 +10,6 @@ concurrency:
 
 permissions:
   contents: read
-
-defaults:
-  run:
-    working-directory: projects/pitwall
 
 jobs:
   python:
@@ -68,7 +60,7 @@ jobs:
               --default_table_expiration 86400 "$PITWALL_BQ_PROJECT:${DBT_CI_SCHEMA}_${layer}"
           done
       - name: dbt build against dev raw data
-        working-directory: projects/pitwall/transform
+        working-directory: transform
         run: |
           cp profiles.yml.example profiles.yml
           uv run dbt deps
@@ -104,7 +96,7 @@ jobs:
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: pitwall-site-data
-          path: site/src/pitwall/data
+          path: site/src/data
           retention-days: 1
 
   site-build:
@@ -122,7 +114,7 @@ jobs:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: pitwall-site-data
-          path: site/src/pitwall/data
+          path: site/src/data
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
