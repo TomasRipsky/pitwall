@@ -74,9 +74,9 @@ export function pipelineLap(stages) {
   const label = [[0, 44, "middle"], [0, 44, "middle"], [0, 44, "middle"], [-30, -4, "end"], [0, -30, "middle"], [0, -30, "middle"], [30, -4, "start"]];
   const track = "M150 350 H820 Q900 350 900 270 V160 Q900 80 820 80 H560 L505 118 L450 80 H180 Q100 80 100 160 V270 Q100 350 180 350 Z";
   return html`<svg class="circuit" viewBox="0 0 1000 430" role="img" aria-label="The pipeline drawn as one lap of a circuit, stage by stage">
-    <path class="tarmac" d=${track}/>
+    <path class="tarmac" d=${track} />
     <path class="kerbs" d="M820 350 Q900 350 900 270 M900 160 Q900 80 820 80 M180 80 Q100 80 100 160 M100 270 Q100 350 180 350"/>
-    <path class="centre" d=${track}/>
+    <path class="centre" d=${track} />
     <g transform="translate(150 335)">${[0, 1, 2, 3].flatMap((c) => [0, 1, 2].map((r) => svg`<rect x=${c * 7} y=${r * 10} width="7" height="10" fill=${(c + r) % 2 ? "#0b0b10" : "#f0f0f0"}/>`))}</g>
     ${stages.map(([name, detail], i) => svg`<g transform="translate(${at[i][0]} ${at[i][1]})">
       <circle class="stop" r="15"/><text class="sector" y="4.5">${i + 1}</text>
