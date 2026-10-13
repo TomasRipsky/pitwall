@@ -5,7 +5,7 @@ toc: false
 
 ```js
 import "./components/fonts.js";
-import {fmt, ink, median, rows, series} from "./components/lab.js";
+import {emptyState, fmt, ink, median, rows, series} from "./components/lab.js";
 import {compoundColor, periods, strategy, teamColor, teamDot, tyre, tyreLegend} from "./components/f1.js";
 import {car, logo, pipelineLap, startLights} from "./components/art.js";
 import {lapChart, strategyChart} from "./components/charts.js";
@@ -47,9 +47,12 @@ const finishers = driverRaces.filter((d) => gpKeys.has(d.session_key) && d.statu
 const stopShare = (test) => finishers.filter((d) => test(d.pit_stops)).length / finishers.length;
 const gpStops = stops.filter((d) => gpKeys.has(d.session_key));
 const neutralShare = gpStops.filter((d) => d.is_under_neutralisation).length / gpStops.length;
-const wearOf = (compound) =>
-  median(stints.filter((d) => d.compound === compound && gpKeys.has(d.session_key)), (d) => d.degradation_s_per_lap) + fuel;
-const judged = undercuts.filter((d) => d.is_success != null);
+const wearOf = (compound) => {
+  const raw = median(stints.filter((d) => d.compound === compound && gpKeys.has(d.session_key)), (d) => d.degradation_s_per_lap);
+  return raw == null ? null : raw + fuel;
+};
+const perLap = (x, digits = 2) => (x == null ? "—" : `${x < 0 ? "−" : "+"}${Math.abs(x).toFixed(digits)}`);
+const judged = undercuts.filter((d) => d.is_success != null && gpKeys.has(d.session_key));
 const greenUndercuts = judged.filter((d) => !d.attacker_pitted_under_neutralisation);
 const undercutRate = d3.mean(greenUndercuts, (d) => (d.is_success ? 1 : 0));
 const withGrid = gp.filter((d) => d.grid_published && d.winner_grid_position != null);
@@ -97,7 +100,7 @@ const resultTable = Inputs.table(
     rows: 24,
     format: {
       Team: (d) => teamDot(d.team_name, d.team_colour_hex),
-      "Places gained": (x) => (x == null ? "—" : x > 0 ? `+${x}` : `${x}`),
+      "Places gained": (x) => (x == null ? "—" : x > 0 ? `+${x}` : x < 0 ? `−${-x}` : "0"),
       Tyres: (t) => strategy(t),
       "Typical lap": (s) => fmt.seconds2(s)
     }
@@ -300,7 +303,8 @@ function rateChart(data, width, {horizontal = false, label = null} = {}) {
 
 ```js
 // Grid and finish ----------------------------------------------------------------------------
-const classified = driverRaces.filter((d) => gpKeys.has(d.session_key) && d.grid_position != null && d.finish_position != null && d.grid_position <= 20 && d.finish_position <= 20);
+const classified = driverRaces.filter((d) => gpKeys.has(d.session_key) && d.grid_position != null && d.finish_position != null);
+const places = d3.range(1, (d3.max(classified, (d) => Math.max(d.grid_position, d.finish_position)) ?? 20) + 1);
 const gridCells = d3.rollups(classified, (v) => v.length, (d) => d.grid_position, (d) => d.finish_position).flatMap(([grid, byFinish]) => byFinish.map(([finish, drivers]) => ({grid, finish, drivers})));
 const held = classified.filter((d) => Math.abs(d.grid_position - d.finish_position) <= 2).length / classified.length;
 function gridChart(width) {
@@ -312,8 +316,8 @@ function gridChart(width) {
     marginBottom: 44,
     padding: 0.06,
     style: {background: "transparent", fontSize: "12px"},
-    x: {label: "Started →", labelAnchor: "center", labelOffset: 38, domain: d3.range(1, 21), tickFormat: (p) => `P${p}`, tickSize: 0},
-    y: {label: "↑ Finished", domain: d3.range(1, 21), tickFormat: (p) => `P${p}`, tickSize: 0},
+    x: {label: "Started →", labelAnchor: "center", labelOffset: 38, domain: places, ticks: places.filter((p) => size >= 480 || p % 3 === 1), tickFormat: (p) => `P${p}`, tickSize: 0},
+    y: {label: "↑ Finished", domain: places, tickFormat: (p) => `P${p}`, tickSize: 0},
     color: {type: "sqrt", range: ["#22283a", "#3987e5", "#d6e6ff"], interpolate: "rgb", legend: true, label: "Drivers"},
     marks: [
       Plot.cell(gridCells, {x: "grid", y: "finish", fill: "drivers", rx: 2, tip: {format: {x: (p) => `P${p}`, y: (p) => `P${p}`}}})
@@ -343,22 +347,52 @@ const byTrack = d3
 ```
 
 ```js
-// Case file: the race won from furthest back. Chosen by the data, never by hand.
+// Case file: the race won from furthest back. Chosen by the data, never by hand — and guarded:
+// with lean data (no race with a published grid yet) the section says so instead of breaking.
+const ordinal = (n) => `${n}${n % 100 > 10 && n % 100 < 14 ? "th" : ["th", "st", "nd", "rd"][n % 10] ?? "th"}`;
 const caseRace = d3.greatest(withGrid, (d) => d.winner_grid_position);
-const inCase = (d) => d.session_key === caseRace.session_key;
-const caseDrivers = d3.sort(driverRaces.filter(inCase), (d) => d.finish_position ?? 99);
-const hero = caseDrivers.find((d) => d.driver_number === caseRace.winner_driver_number);
-const caseLaps = lapsOf(caseRace.session_key);
-const heroLaps = d3.sort(caseLaps.filter((d) => d.driver_number === hero.driver_number && d.position != null), (d) => d.lap_number);
-const caseStops = stops.filter(inCase);
-const heroStops = d3.sort(caseStops.filter((d) => d.driver_number === hero.driver_number), (d) => d.lap_number);
-const casePeriods = periods(neutralised.filter(inCase));
-const firstLead = heroLaps.find((d) => d.position === 1);
-const lastNotLeading = heroLaps.findLast((d) => d.position !== 1);
-const afterLapOne = heroLaps.find((d) => d.lap_number === 1);
-const kinds = {SC: "the Safety Car", VSC: "the Virtual Safety Car", RED: "a red flag"};
-const interruptions = casePeriods.map((p) => `${kinds[p.type]} (${p.from === p.to ? `lap ${p.from}` : `laps ${p.from}–${p.to}`})`);
-const caseView = {drivers: caseDrivers, laps: caseLaps, stops: caseStops, racePeriods: casePeriods, highlight: hero.driver_number};
+const hero = caseRace && driverRaces.find((d) => d.session_key === caseRace.session_key && d.driver_number === caseRace.winner_driver_number);
+function caseFile() {
+  if (!hero) return html`<h2><span class="num"><i>07</i></span>Case file</h2>${emptyState("race with a published grid")}`;
+  const inCase = (d) => d.session_key === caseRace.session_key;
+  const caseDrivers = d3.sort(driverRaces.filter(inCase), (d) => d.finish_position ?? 99);
+  const caseLaps = lapsOf(caseRace.session_key);
+  const heroLaps = d3.sort(caseLaps.filter((d) => d.driver_number === hero.driver_number && d.position != null), (d) => d.lap_number);
+  const caseStops = stops.filter(inCase);
+  const heroStops = d3.sort(caseStops.filter((d) => d.driver_number === hero.driver_number), (d) => d.lap_number);
+  const casePeriods = periods(neutralised.filter(inCase));
+  const afterLapOne = heroLaps.find((d) => d.lap_number === 1);
+  const firstLead = heroLaps.find((d) => d.position === 1);
+  const lastNotLeading = heroLaps.findLast((d) => d.position !== 1);
+  const flag = heroLaps.at(-1)?.lap_number;
+  // "in front for good" only when the data shows it: led, lost it, and led again before the flag
+  const forGood = firstLead && lastNotLeading && lastNotLeading.lap_number > firstLead.lap_number && lastNotLeading.lap_number < flag ? lastNotLeading.lap_number + 1 : null;
+  const kinds = {SC: "the Safety Car", VSC: "the Virtual Safety Car", RED: "a red flag"};
+  const interruptions = casePeriods.map((d) => `${kinds[d.type]} (${d.from === d.to ? `lap ${d.from}` : `laps ${d.from}–${d.to}`})`);
+  const view = {drivers: caseDrivers, laps: caseLaps, stops: caseStops, racePeriods: casePeriods, highlight: hero.driver_number};
+  const pace = hero.pace_gap_pct == null ? "" : html`<li>Typical lap ${fmt.seconds2(hero.median_clean_lap_s)}: ${hero.pace_gap_pct < 0 ? html`<b>${Math.abs(hero.pace_gap_pct).toFixed(1)}% faster</b> than the field's` : `${hero.pace_gap_pct.toFixed(1)}% slower than the field's`}.</li>`;
+  return html`<h2><span class="num"><i>07</i></span>Case file: won from P${hero.grid_position}</h2>
+  <p class="sub">The win from furthest back in the data — chosen by a query, not by us: the ${caseRace.meeting_name} ${caseRace.season} at ${caseRace.circuit_short_name}.</p>
+  <div class="case">
+    <div>
+      <span class="big">P${hero.grid_position} → P1</span>
+      <p><b>${hero.full_name}</b> (${hero.team_name}) started ${hero.grid_position === caseDrivers.length ? "last" : `${ordinal(hero.grid_position)} of ${caseDrivers.length}`} and won.</p>
+      <ol>
+        ${afterLapOne ? html`<li>After the first lap: <b>P${afterLapOne.position}</b>.</li>` : ""}
+        ${interruptions.length ? html`<li>The race was neutralised ${interruptions.length === 1 ? "once" : `${interruptions.length} times`}: ${interruptions.join(", ")}.</li>` : html`<li>The race ran without a Safety Car or red flag.</li>`}
+        <li>${heroStops.length === 0 ? "No pit stop recorded." : html`Pit stops: ${heroStops.map((d) => `lap ${d.lap_number}${d.is_under_neutralisation ? " (while neutralised)" : ""}`).join(", ")} — tyres ${strategy(hero.tyres)}.`}</li>
+        ${firstLead ? html`<li>First led on <b>lap ${firstLead.lap_number}</b>${forGood ? `; in front for good from lap ${forGood}` : ""}.</li>` : ""}
+        ${pace}
+      </ol>
+      <p class="verdict">Read the chart with the list: places won at once across a shaded band came from a stoppage or a cheap stop; places won one at a time on a clear track came from pace. A red flag lets everyone change tyres for free and closes every gap — it is the great reset.</p>
+    </div>
+    <div class="panel">
+      <h3>${hero.name_acronym} against the field <small>position by lap · dots are ${hero.name_acronym}'s pit stops</small></h3>
+      ${resize((width) => lapChart(view, width) ?? emptyState("positions"))}
+    </div>
+  </div>
+  <p class="footnote">Everything in this section is computed from the exported rows of that race: if a later race is won from further back, the case changes by itself at the next pipeline run.</p>`;
+}
 ```
 
 <header class="top">
@@ -401,7 +435,7 @@ const caseView = {drivers: caseDrivers, laps: caseLaps, stops: caseStops, racePe
   <div class="boards">
     <div class="board"><span class="plate">Pit loss</span><b>${fmt.one(pitLoss)}<small> s</small></b><p>is what a pit stop costs: the median time in the pit lane under normal racing. The tyre change itself takes under three seconds — the rest is driving slowly past the garages.</p></div>
     <div class="board"><span class="plate">Box</span><b>${fmt.percent(stopShare((n) => n === 1))}<small> once</small></b><p>of finishers stop exactly once, ${fmt.percent(stopShare((n) => n === 2))} twice and ${fmt.percent(stopShare((n) => n >= 3))} three times or more. With a stop that expensive, nobody makes one they can avoid.</p></div>
-    <div class="board"><span class="plate">Tyre wear</span><b>+${wearOf("SOFT").toFixed(2)}<small> s/lap</small></b><p>is what a soft tyre loses every lap as it wears; a hard one loses +${wearOf("HARD").toFixed(2)} s. Soft is faster at first and gone sooner — that trade is the whole game.</p></div>
+    <div class="board"><span class="plate">Tyre wear</span><b>${perLap(wearOf("SOFT"))}<small> s/lap</small></b><p>is what a soft tyre loses every lap as it wears; a hard one loses ${perLap(wearOf("HARD"))} s. Soft is faster at first and gone sooner — that trade is the whole game.</p></div>
     <div class="board"><span class="plate">Undercut</span><b>${fmt.percent(undercutRate)}</b><p>of the time, pitting before the car ahead gets you past it. Fresh tyres are quick, but usually not quick enough: ${fmt.count(greenUndercuts.length)} attempts measured.</p></div>
     <div class="board"><span class="plate">Safety Car</span><b>${fmt.percent(neutralShare)}</b><p>of all race stops are made while the race is neutralised. Everyone drives slowly then, so a stop costs far less — teams wait for it if they can.</p></div>
     <div class="board"><span class="plate">Pole</span><b>${fmt.percent(poleWins)}</b><p>of races are won from first on the grid, and ${fmt.percent(frontRowWins)} from the first three places. Strategy decides the rest.</p></div>
@@ -455,7 +489,7 @@ const caseView = {drivers: caseDrivers, laps: caseLaps, stops: caseStops, racePe
     <div class="panel">
       <h3>Wear per lap, all circuits <small>median race stint, fuel-corrected</small></h3>
       <div class="tiles" style="margin: 1.2rem 0 0">
-        ${dry.map((c) => html`<div class="tile"><b>+${wearOf(c).toFixed(3)}</b><span>${tyre(c, 18)} ${c[0] + c.slice(1).toLowerCase()} · s per lap</span></div>`)}
+        ${dry.map((c) => html`<div class="tile"><b>${perLap(wearOf(c), 3)}</b><span>${tyre(c, 18)} ${c[0] + c.slice(1).toLowerCase()} · s per lap</span></div>`)}
       </div>
     </div>
   </div>
@@ -542,32 +576,12 @@ const caseView = {drivers: caseDrivers, laps: caseLaps, stops: caseStops, racePe
       </div>
     </div>
   </div>
-  <p class="footnote">Only classified finishers of full races with a published grid are counted, so retirements — the biggest way to lose places — are not in the picture. Grid penalties are already applied in the source's grid.</p>
+  <p class="footnote">Only classified finishers of full races with a published grid are counted (the field grew from 20 to ${places.length} cars), so retirements — the biggest way to lose places — are not in the picture. Grid penalties are already applied in the source's grid.</p>
 </section>
 
 <section id="case" class="band">
 <div class="wrap">
-  <h2><span class="num"><i>07</i></span>Case file: won from P${hero.grid_position}</h2>
-  <p class="sub">The win from furthest back in the data — chosen by a query, not by us: the ${caseRace.meeting_name} ${caseRace.season} at ${caseRace.circuit_short_name}.</p>
-  <div class="case">
-    <div>
-      <span class="big">P${hero.grid_position} → P1</span>
-      <p><b>${hero.full_name}</b> (${hero.team_name}) started ${hero.grid_position === caseDrivers.length ? "last" : `${hero.grid_position}th of ${caseDrivers.length}`} and won.</p>
-      <ol>
-        ${afterLapOne ? html`<li>After the first lap: <b>P${afterLapOne.position}</b>.</li>` : ""}
-        ${interruptions.length ? html`<li>The race was neutralised ${interruptions.length === 1 ? "once" : `${interruptions.length} times`}: ${interruptions.join(", ")}.</li>` : html`<li>The race ran without a Safety Car or red flag.</li>`}
-        <li>${heroStops.length === 0 ? "No pit stop recorded." : html`Pit stops: ${heroStops.map((s) => `lap ${s.lap_number}${s.is_under_neutralisation ? " (while neutralised)" : ""}`).join(", ")} — tyres ${strategy(hero.tyres)}.`}</li>
-        ${firstLead ? html`<li>First led on <b>lap ${firstLead.lap_number}</b>${lastNotLeading && lastNotLeading.lap_number > firstLead.lap_number ? html`; in front for good from lap ${lastNotLeading.lap_number + 1}` : ""}.</li>` : ""}
-        <li>Typical lap ${fmt.seconds2(hero.median_clean_lap_s)}: ${hero.pace_gap_pct < 0 ? html`<b>${Math.abs(hero.pace_gap_pct).toFixed(1)}% faster</b> than the field's` : `${hero.pace_gap_pct.toFixed(1)}% slower than the field's`}.</li>
-      </ol>
-      <p class="verdict">Read the chart with the list: places won at once across a shaded band came from a stoppage or a cheap stop; places won one at a time on a clear track came from pace. A red flag lets everyone change tyres for free and closes every gap — it is the great reset.</p>
-    </div>
-    <div class="panel">
-      <h3>${hero.name_acronym} against the field <small>position by lap · dots are ${hero.name_acronym}'s pit stops</small></h3>
-      ${resize((width) => lapChart(caseView, width))}
-    </div>
-  </div>
-  <p class="footnote">Everything in this section is computed from the exported rows of that race: if a later race is won from further back, the case changes by itself at the next pipeline run.</p>
+  ${caseFile()}
 </div>
 </section>
 

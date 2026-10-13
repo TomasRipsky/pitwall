@@ -42,10 +42,11 @@ stops as (
 
 tyres as (
     -- the strategy in one string, e.g. "M-H-H": first letter of each compound, in stint order
+    -- (U = the source did not name the compound: dropping it would hide a stint)
     select
         session_key,
         driver_number,
-        string_agg(substr(compound, 1, 1), '-' order by stint_number) as tyres
+        string_agg(substr(coalesce(compound, 'UNKNOWN'), 1, 1), '-' order by stint_number) as tyres
     from {{ ref('fct_stints') }}
     group by session_key, driver_number
 )

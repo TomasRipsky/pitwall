@@ -25,7 +25,9 @@ const fuel = rows(await FileAttachment("data/tyre_wear.parquet").parquet())[0]?.
 // The filter bar: every block below reads these four values.
 const all = "All";
 const seasonInput = Inputs.select([all, ...d3.sort(new Set(races.map((d) => d.season)), (d) => -d)], {label: "Season", format: String});
-const sessionInput = Inputs.radio([all, "Race", "Sprint"], {label: "Session", value: all});
+// Races by default: a Sprint is a third of the distance with no mandatory stop and often no published
+// grid, so mixing the two would blur wins, stops per finisher and places gained.
+const sessionInput = Inputs.radio(["Race", "Sprint", all], {label: "Session", value: "Race", format: (d) => (d === all ? "Both" : d)});
 const circuitInput = Inputs.select([all, ...d3.sort(new Set(races.map((d) => d.circuit_short_name)))], {label: "Circuit"});
 const teamInput = Inputs.select([all, ...d3.sort(new Set(driverRaces.map((d) => d.team_name)))], {label: "Team"});
 const season = Generators.input(seasonInput);
@@ -50,13 +52,19 @@ const mean = (list, accessor) => {
   const m = d3.mean(list, (d) => accessor(d) ?? NaN);
   return m === undefined ? null : m;
 };
+// a sum of nothing is unknown, not zero (Sprints rarely have a grid, so no places gained)
+const sumKnown = (list, accessor) => {
+  const known = list.map(accessor).filter((x) => x != null);
+  return known.length ? d3.sum(known) : null;
+};
+const signedCount = (x) => (x == null ? "—" : x > 0 ? `+${x}` : x < 0 ? `−${-x}` : "0");
 ```
 
 ```js
 // KPIs
 const greenTimed = fStops.filter((d) => d.source === "pit" && !d.is_under_neutralisation);
 const kpiTiles = html`<div class="kpis">
-  <div class="kpi"><span>Races and sprints</span><b>${fmt.count(fRaces.length)}</b><small>${team === all ? `${fmt.count(d3.sum(fRaces, (d) => d.laps))} laps of racing` : "a team does not narrow the race list"}</small></div>
+  <div class="kpi"><span>${session === all ? "Races and sprints" : `${session}s`}</span><b>${fmt.count(fRaces.length)}</b><small>${team === all ? `${fmt.count(d3.sum(fRaces, (d) => d.laps))} laps of racing` : "a team does not narrow the race list"}</small></div>
   <div class="kpi"><span>Driver laps</span><b>${fmt.count(d3.sum(fDrivers, (d) => d.laps_completed ?? 0))}</b><small>${fmt.count(fDrivers.length)} starts by ${new Set(fDrivers.map((d) => d.full_name)).size} drivers</small></div>
   <div class="kpi"><span>Pit stops</span><b>${fmt.count(fStops.length)}</b><small>${fmt.percent(share(fStops, (d) => d.is_under_neutralisation))} while neutralised</small></div>
   <div class="kpi"><span>Pit-lane time</span><b>${fmt.seconds(median(greenTimed, (d) => d.pit_lane_time_s))}</b><small>median of ${fmt.count(greenTimed.length)} green-flag stops</small></div>
@@ -79,7 +87,7 @@ const driverRows = d3
       Points: d3.sum(v, (d) => d.points ?? 0),
       "Avg grid": mean(v, (d) => d.grid_position),
       "Avg finish": mean(v, (d) => d.finish_position),
-      "Places gained": d3.sum(v, (d) => d.positions_gained ?? 0),
+      "Places gained": sumKnown(v, (d) => d.positions_gained),
       "Pace gap %": median(v, (d) => d.pace_gap_pct),
       DNF: v.filter((d) => d.status === "DNF").length
     };
@@ -95,7 +103,7 @@ const driverTable = Inputs.table(driverRows, {
     Team: (d) => teamDot(d.team_name, d.team_colour_hex),
     "Avg grid": (x) => fmt.one(x),
     "Avg finish": (x) => fmt.one(x),
-    "Places gained": (x) => (x > 0 ? `+${x}` : `${x}`),
+    "Places gained": signedCount,
     "Pace gap %": (x) => fmt.signed(x)
   }
 });
@@ -134,7 +142,7 @@ const teamRows = d3
       Points: d3.sum(v, (d) => d.points ?? 0),
       Wins: v.filter((d) => d.finish_position === 1).length,
       Podiums: v.filter((d) => d.finish_position != null && d.finish_position <= 3).length,
-      "Places gained": d3.sum(v, (d) => d.positions_gained ?? 0),
+      "Places gained": sumKnown(v, (d) => d.positions_gained),
       "Pit stops": teamStops.length,
       "Stationary (s)": median(teamStops, (d) => d.stationary_time_s),
       "Undercuts tried": attempts.length,
@@ -148,7 +156,7 @@ const teamTable = Inputs.table(teamRows, {
   rows: 16,
   format: {
     Team: (d) => teamDot(d.team_name, d.team_colour_hex),
-    "Places gained": (x) => (x > 0 ? `+${x}` : `${x}`),
+    "Places gained": signedCount,
     "Stationary (s)": (x) => (x == null ? "—" : x.toFixed(2)),
     "Undercuts worked": (x) => fmt.percent(x)
   }
@@ -160,16 +168,18 @@ function seasonPointsChart(width) {
     .flatMap(([year, teams]) => teams.map(([name, s]) => ({season: String(year), team: name, ...s})))
     .filter((d) => d.points > 0);
   if (!data.length) return emptyState("points");
+  const totals = d3.rollup(data, (v) => d3.sum(v, (d) => d.points), (d) => d.season);
   return Plot.plot({
     width,
-    height: 300,
+    height: 360,
     marginBottom: 42,
     style: {background: "transparent", fontSize: "12px"},
     color: {type: "identity"},
     x: {label: null, type: "band", paddingInner: 0.35},
     y: {label: "↑ Points", grid: true},
     marks: [
-      Plot.barY(data, Plot.stackY({x: "season", y: "points", fill: (d) => teamColor(d.colour), order: "-sum", insetTop: 1, insetBottom: 1, channels: {Team: "team"}, tip: {format: {fill: false, x: true, y: true}}})),
+      Plot.barY(data, Plot.stackY({x: "season", y: "points", z: "team", fill: (d) => teamColor(d.colour), order: "-sum", insetTop: 1, insetBottom: 1, channels: {Team: "team"}, tip: {format: {fill: false, z: false, x: true, y: true}}})),
+      Plot.text(data, Plot.stackY({x: "season", y: "points", z: "team", order: "-sum", text: (d) => (d.points / totals.get(d.season) > 0.07 ? d.team : ""), fill: ink.text, stroke: ink.surface, strokeWidth: 4, fontWeight: 600})),
       Plot.ruleY([0], {stroke: "#6b6b7b"})
     ]
   });
@@ -341,7 +351,7 @@ const qualityTable = Inputs.table(qualityRows, {select: false, rows: 14, format:
   <h2><span class="num"><i>T</i></span>Teams</h2>
   <p class="sub">What a team controls beyond the car: how fast its crew changes four wheels, and how often its strategists make the undercut work. A team that changed its name appears under each name it raced with.</p>
   <div class="panel">
-    <h3>Points by season <small>each segment is a team, largest at the bottom · hover for the name</small></h3>
+    <h3>Points by season <small>each segment is a team, largest at the bottom · the larger ones are named, hover for the rest</small></h3>
     ${resize((width) => seasonPointsChart(width))}
   </div>
   <div class="panel mt">

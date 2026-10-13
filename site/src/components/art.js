@@ -42,16 +42,6 @@ export function car({livery = "#e10600"} = {}) {
   </svg>`;
 }
 
-/** Chequered flag strip, used as a section divider. */
-export function chequered({columns = 24, rows = 2, cell = 10} = {}) {
-  const cells = [];
-  for (let r = 0; r < rows; ++r) for (let c = 0; c < columns; ++c) if ((r + c) % 2 === 0) cells.push([c, r]);
-  return svg`<svg width=${columns * cell} height=${rows * cell} role="img" aria-label="Chequered flag">
-    <rect width=${columns * cell} height=${rows * cell} fill="#f0f0f0"/>
-    ${cells.map(([c, r]) => svg`<rect x=${c * cell} y=${r * cell} width=${cell} height=${cell} fill="#0b0b10"/>`)}
-  </svg>`;
-}
-
 /** The brand mark: a tyre seen from the side, soft-compound red. */
 export function logo(size = 26) {
   return svg`<svg viewBox="0 0 32 32" width=${size} height=${size} aria-hidden="true">
@@ -73,7 +63,7 @@ export function pipelineLap(stages) {
   const at = [[250, 350], [520, 350], [790, 350], [900, 215], [690, 80], [330, 80], [100, 215]];
   const label = [[0, 44, "middle"], [0, 44, "middle"], [0, 44, "middle"], [-30, -4, "end"], [0, -30, "middle"], [0, -30, "middle"], [30, -4, "start"]];
   const track = "M150 350 H820 Q900 350 900 270 V160 Q900 80 820 80 H560 L505 118 L450 80 H180 Q100 80 100 160 V270 Q100 350 180 350 Z";
-  return html`<svg class="circuit" viewBox="0 0 1000 430" role="img" aria-label="The pipeline drawn as one lap of a circuit, stage by stage">
+  return html`<svg class="circuit" viewBox="0 0 1000 430" aria-hidden="true">
     <path class="tarmac" d=${track} />
     <path class="kerbs" d="M820 350 Q900 350 900 270 M900 160 Q900 80 820 80 M180 80 Q100 80 100 160 M100 270 Q100 350 180 350"/>
     <path class="centre" d=${track} />
@@ -84,5 +74,5 @@ export function pipelineLap(stages) {
       <text class="small" x=${label[i][0]} y=${label[i][1] + 17} text-anchor=${label[i][2]}>${detail}</text>
     </g>`)}
   </svg>
-  <ol class="pw-lap">${stages.map(([name, detail], i) => html`<li><span class="pw-sector">${i + 1}</span><strong>${name}</strong><small>${detail}</small></li>`)}</ol>`;
+  <ol class="pw-lap" aria-label="The pipeline, stage by stage">${stages.map(([name, detail], i) => html`<li><span class="pw-sector">${i + 1}</span><strong>${name}</strong><small>${detail}</small></li>`)}</ol>`;
 }

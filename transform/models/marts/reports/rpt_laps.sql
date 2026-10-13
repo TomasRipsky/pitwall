@@ -5,10 +5,7 @@ select
     driver_number,
     lap_number,
     position_end_of_lap as position,
-    round(lap_time_s, 3) as lap_time_s,
     compound,
     tyre_age_laps,
-    neutralisation,
-    is_pit_in_lap or is_pit_out_lap as is_pit_lap,
-    is_clean_lap
+    neutralisation
 from {{ ref('fct_laps') }}

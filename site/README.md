@@ -6,7 +6,7 @@ The public dashboard: https://tomasripsky.github.io/pitwall/ — Observable Fram
 ## How it is built
 
 1. **Data is exported, never queried from the site.** `pitwall site-export --out site/src/data`
-   (`make site-data`) writes one Parquet file per chart into `src/data/` (git-ignored) before the
+   (`make site-data`) writes one Parquet file per dbt report model into `src/data/` (git-ignored) before the
    build. In production it runs as the read-only dashboard account and exports only data we are
    happy to publish.
 2. **Two pages.** `src/index.md` is the story: hero, the answers, the analysis sections, a case

@@ -139,8 +139,9 @@ export function lapChart({drivers, laps, stops = [], racePeriods = [], highlight
   const lastLap = d3.max(data, (d) => d.lap_number);
   const ends = d3.rollups(data, (v) => d3.greatest(v, (d) => d.lap_number), (d) => d.driver_number).map(([, d]) => d);
   const position = new Map(data.map((d) => [`${d.driver_number}-${d.lap_number}`, d.position]));
+  // a stop lap sometimes has no position in the source: draw the dot where the car was a lap earlier
   const pits = stops
-    .map((s) => ({...s, position: position.get(`${s.driver_number}-${s.lap_number}`)}))
+    .map((s) => ({...s, position: position.get(`${s.driver_number}-${s.lap_number}`) ?? position.get(`${s.driver_number}-${s.lap_number - 1}`)}))
     .filter((s) => s.position != null && (highlight == null || s.driver_number === highlight));
   const colour = (d) => (highlight != null && d.driver_number !== highlight ? "#5a5a6b" : teamColor(who(d).team_colour_hex));
   const line = (rowsOf, options) => Plot.line(rowsOf, {
@@ -170,14 +171,24 @@ export function lapChart({drivers, laps, stops = [], racePeriods = [], highlight
       line(field.filter((d) => second.has(d.driver_number)), {strokeWidth: highlight == null ? 2 : 1.2, strokeOpacity: highlight == null ? 1 : 0.6, strokeDasharray: "5 4"}),
       line(star, {strokeWidth: 3.5}),
       Plot.dot(pits, {x: "lap_number", y: "position", r: 4, fill: ink.surface, stroke: ink.text, strokeWidth: 1.5}),
-      Plot.text(ends, {
+      // fontWeight is a constant in Plot, not a channel: the highlighted label is its own mark
+      Plot.text(ends.filter((d) => d.driver_number !== highlight), {
         x: "lap_number",
         y: "position",
         text: (d) => who(d).name_acronym,
         dx: 8,
         textAnchor: "start",
-        fill: (d) => (highlight != null && d.driver_number !== highlight ? ink.muted : ink.text),
-        fontWeight: (d) => (d.driver_number === highlight ? 800 : 600)
+        fill: highlight == null ? ink.text : ink.muted,
+        fontWeight: 600
+      }),
+      Plot.text(ends.filter((d) => d.driver_number === highlight), {
+        x: "lap_number",
+        y: "position",
+        text: (d) => who(d).name_acronym,
+        dx: 8,
+        textAnchor: "start",
+        fill: ink.text,
+        fontWeight: 800
       }),
       Plot.tip(data, Plot.pointer({
         x: "lap_number",

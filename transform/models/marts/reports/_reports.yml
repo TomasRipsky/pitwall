@@ -7,6 +7,10 @@ version: 2
 models:
   - name: rpt_races
     description: "Grain: one row per Race or Sprint session. The race list of the site, with what each race looked like and how complete its data is."
+    data_tests:
+      - dbt_utils.equal_rowcount:
+          arguments:
+            compare_model: ref('dim_sessions')
     columns:
       - name: session_key
         description: "{{ doc('session_key') }}"
@@ -75,6 +79,10 @@ models:
   - name: rpt_driver_races
     description: "Grain: one row per driver per Race or Sprint session. Where they started and finished, how they got there (stops, tyres) and how fast they were."
     data_tests:
+      # an inner join to drivers or races must never drop a row of the fact
+      - dbt_utils.equal_rowcount:
+          arguments:
+            compare_model: ref('fct_session_results')
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns: [session_key, driver_number]
@@ -128,9 +136,9 @@ models:
               arguments:
                 values: [Finished, DNF, DNS, DSQ]
       - name: pit_stops
-        description: Pit stops made (0 when none recorded).
+        description: Pit stops recorded (0 when none). A tyre change with no pit record — a few Sprint stints, usually around a stoppage — is not counted as a stop, so `tyres` can show two stints beside zero stops.
       - name: tyres
-        description: 'The strategy in one string: first letter of each compound in stint order, e.g. "M-H-H".'
+        description: 'The strategy in one string: first letter of each compound in stint order, e.g. "M-H-H" (U = compound not named by the source). Null when the driver has no stint.'
       - name: median_clean_lap_s
         description: Median lap time over clean laps (no pit lap, no neutralisation, no outliers), in seconds.
       - name: best_lap_s
@@ -141,8 +149,12 @@ models:
         description: Highest speed-trap reading.
 
   - name: rpt_laps
-    description: "Grain: one row per lap of a driver. The lap chart (position by lap) and the pace charts read this; it carries only the columns they need."
+    description: "Grain: one row per lap of a driver. The lap chart (position by lap) reads this; it is the largest file the browser loads, so it carries only the columns the chart and its tooltip use."
     data_tests:
+      # an inner join to drivers or races must never drop a row of the fact
+      - dbt_utils.equal_rowcount:
+          arguments:
+            compare_model: ref('fct_laps')
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns: [session_key, driver_number, lap_number]
@@ -156,8 +168,6 @@ models:
         description: Lap number, starting at 1.
       - name: position
         description: Position at the end of the lap. Null where the source has no position near the lap end.
-      - name: lap_time_s
-        description: Lap time in seconds. Null for timing gaps.
       - name: compound
         description: "{{ doc('compound') }}"
       - name: tyre_age_laps
@@ -168,14 +178,14 @@ models:
           - accepted_values:
               arguments:
                 values: [SC, VSC, RED]
-      - name: is_pit_lap
-        description: The lap entered or left the pits.
-      - name: is_clean_lap
-        description: A representative racing lap (no pit lap, no neutralisation, not lap 1, not an outlier).
 
   - name: rpt_stints
     description: "Grain: one row per stint — the laps a driver ran on one set of tyres — with who, where and how the race ended for them."
     data_tests:
+      # an inner join to drivers or races must never drop a row of the fact
+      - dbt_utils.equal_rowcount:
+          arguments:
+            compare_model: ref('fct_stints')
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns: [session_key, driver_number, stint_number]
@@ -225,6 +235,10 @@ models:
   - name: rpt_pit_stops
     description: "Grain: one row per pit stop, with who made it, where, how long it took and what was running at the time."
     data_tests:
+      # an inner join to drivers or races must never drop a row of the fact
+      - dbt_utils.equal_rowcount:
+          arguments:
+            compare_model: ref('fct_pit_stops')
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns: [session_key, driver_number, lap_number]
@@ -311,6 +325,10 @@ models:
   - name: rpt_undercuts
     description: "Grain: one row per undercut attempt — an attacker pitting before the car directly ahead — and whether it worked."
     data_tests:
+      # an inner join to drivers or races must never drop a row of the fact
+      - dbt_utils.equal_rowcount:
+          arguments:
+            compare_model: ref('fct_undercut_attempts')
       - dbt_utils.unique_combination_of_columns:
           arguments:
             combination_of_columns: [session_key, attacker_driver_number, defender_driver_number, attacker_pit_lap]
