@@ -18,7 +18,7 @@ with messages as (
         end as ended,
         -- A stopped race is a RED flag message through 2025, always with "SESSION ABORTED" in the
         -- same second; from 2026 only "SESSION ABORTED" is sent. Either one is a red flag.
-        coalesce(flag = 'RED', false) or message = 'SESSION ABORTED' as is_red_flag
+        coalesce(flag = 'RED' or message = 'SESSION ABORTED', false) as is_red_flag
     from {{ ref('stg_openf1__race_control') }}
     where category = 'SafetyCar' or flag = 'RED' or message = 'SESSION ABORTED'
 ),
@@ -59,7 +59,8 @@ next_interruption as (
     where true
     qualify row_number() over (
         partition by starts.session_key, starts.neutralisation, starts.recorded_at
-        order by interruptions.recorded_at
+        -- deterministic on a tie: a red flag wins over a new deployment in the same instant
+        order by interruptions.recorded_at, interruptions.is_red_flag desc, interruptions.lap_number desc
     ) = 1
 ),
 
