@@ -1,4 +1,4 @@
-// pitwall-specific encodings: tyre compounds and race neutralisations.
+// pitwall-specific encodings: tyre compounds, team colours and race neutralisations.
 import {html, svg} from "npm:htl";
 
 export const compounds = ["SOFT", "MEDIUM", "HARD", "INTERMEDIATE", "WET"];
@@ -64,4 +64,18 @@ export function labelledPeriods(list) {
     if (!kept.some((k) => p.from <= k.to + 1 && k.from <= p.to + 1)) kept.push(p);
   }
   return kept;
+}
+
+/** Team colour from the source (hex without the hash); grey when missing. */
+export const teamColor = (hex) => (hex ? `#${hex}` : "#8a8a9a");
+
+/** A dot in the team's colour followed by the name: colour never carries identity alone. */
+export function teamDot(name, hex) {
+  return html`<span style="display:inline-flex;align-items:center;gap:.4rem"><span style="width:.7rem;height:.7rem;border-radius:50%;background:${teamColor(hex)};flex:none"></span>${name ?? "—"}</span>`;
+}
+
+/** "M-H-H" → a row of tyre badges. */
+export function strategy(tyres, size = 18) {
+  const byLetter = {S: "SOFT", M: "MEDIUM", H: "HARD", I: "INTERMEDIATE", W: "WET"};
+  return html`<span class="tyres-inline">${(tyres ?? "").split("-").filter(Boolean).map((l) => tyre(byLetter[l] ?? "UNKNOWN", size))}</span>`;
 }

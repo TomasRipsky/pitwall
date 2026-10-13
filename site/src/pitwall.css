@@ -1,210 +1,119 @@
-/* pitwall theme: a dark pit-wall screen. Shared structure comes from lab.css. */
-/* Titillium Web (SIL OFL 1.1) is served by this site and registered by components/fonts.js. */
+/* pitwall — a pit wall at night: carbon black, signal red, kerbs, start lights and pit boards.
+   Structure comes from components/lab.css (shared by every lab project); this file sets its
+   variables and adds what is only Formula 1. Titillium Web (SIL OFL 1.1) is served by this site
+   and registered by components/fonts.js — no third-party font requests.
+   Data colours: the series trio is validated with the dataviz skill against the page surface
+   (CVD ΔE ≥ 14); red stays chrome and the soft tyre, never a generic series. */
 @import url("observablehq:default.css");
 @import url("observablehq:theme-near-midnight.css");
 @import url("./components/lab.css");
 
 :root {
-  --pw-surface: #15151e;
-  --pw-panel: #1f1f2b;
-  --pw-line: #2e2e3d;
-  --pw-ink: #f0f0f0;
-  --pw-muted: #a3a3b3;
-  --pw-red: #e10600;
-  --pw-red-text: #ff5a52; /* red for small text: >= 4.5:1 on the dark panels */
-  --theme-background: var(--pw-surface);
-  --theme-background-alt: var(--pw-panel);
-  --theme-foreground: var(--pw-ink);
-  --theme-foreground-muted: var(--pw-muted);
-  --theme-foreground-faint: #8a8a9a;
-  --theme-foreground-faintest: var(--pw-line);
-  --theme-foreground-focus: var(--pw-red);
-  --sans-serif: "Titillium Web", system-ui, -apple-system, sans-serif;
-  --serif: var(--sans-serif);
+  --lab-bg: #15151e;
+  --lab-bg-alt: #1a1a25;
+  --lab-panel: #1f1f2b;
+  --lab-line: #2e2e3d;
+  --lab-ink: #f0f0f0;
+  --lab-soft: #c9c9d6;
+  --lab-muted: #a3a3b3;
+  --lab-accent: #e10600;
+  --lab-accent-ink: #ffffff;
+  --lab-accent-text: #ff5a52; /* red for small text: >= 4.5:1 on the dark surfaces */
+  --lab-series-1: #3987e5;
+  --lab-series-2: #d95926;
+  --lab-series-3: #2aa198;
+  --lab-sans: "Titillium Web", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --lab-display: "Titillium Web", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --pw-board: #0b0b10;
+  --pw-yellow: #ffd12e;
+  color-scheme: dark;
 }
 
-body {
-  background: var(--pw-surface);
-}
+h1, h2, h3 { letter-spacing: 0.01em; }
+.brand svg { flex: none; }
 
-h1,
-h2,
-h3 {
-  font-family: var(--sans-serif);
-  font-weight: 700;
-  letter-spacing: 0.01em;
-}
+/* section numbers, slanted like broadcast graphics */
+.num { flex: none; display: inline-grid; place-items: center; min-width: 2.5rem; height: 2rem; padding: 0 0.5rem; background: var(--lab-accent); color: #fff; font: 900 1rem/1 var(--lab-display); font-style: italic; transform: skewX(-12deg); border-radius: 3px; }
+.num > i { transform: skewX(12deg); font-style: italic; }
 
-.card {
-  background: var(--pw-panel);
-  border: 1px solid var(--pw-line);
-}
-
-.tip {
-  background: var(--pw-panel);
-  border-left-color: var(--pw-red);
-}
-
-.tip::before {
-  color: var(--pw-red-text);
-}
-
-a {
-  color: var(--pw-red-text);
-}
-
-.big {
-  color: var(--pw-ink);
-}
-
-/* The one hero figure per page */
-.huge {
-  display: block;
-  font-size: 3.6rem;
-  font-weight: 900;
-  line-height: 1;
-  color: var(--pw-ink);
-}
-
-/* Hero banner with the car illustration */
-.pw-hero {
-  position: relative;
-  overflow: hidden;
-  min-height: 250px;
-  margin: 1rem 0 0;
-  padding: 2rem 2rem 2.5rem;
-  border-radius: var(--lab-radius) var(--lab-radius) 0 0;
+/* hero: the grid at night -------------------------------------------------- */
+.hero {
   background:
-    radial-gradient(circle at 85% 70%, rgba(225, 6, 0, 0.35), transparent 55%),
-    linear-gradient(100deg, #15151e 35%, #22101a 100%);
+    radial-gradient(ellipse at 85% 10%, rgba(225, 6, 0, 0.22), transparent 55%),
+    linear-gradient(180deg, #101017, var(--lab-bg) 90%);
 }
+.hero-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 2rem; align-items: center; max-width: var(--lab-width); margin: 0 auto; position: relative; z-index: 2; }
+.hero-grid .hero-copy { margin: 0; }
+.hero-art { min-width: 0; }
+.hero-art .pw-car { width: 100%; height: auto; display: block; }
+@media (max-width: 900px) { .hero-grid { grid-template-columns: 1fr; } .hero-art { max-width: 30rem; } }
 
-.pw-hero h1 {
-  position: relative;
-  max-width: 17ch;
-  margin: 0.2rem 0 0.6rem;
-  font-size: clamp(2rem, 4vw, 3rem);
-  line-height: 1.05;
+/* five red lights come on one by one, then all go out: the start of a race */
+.lights { display: flex; gap: 0.7rem; padding: 0.7rem 0.9rem; background: var(--pw-board); border: 1px solid var(--lab-line); border-radius: 12px; width: fit-content; margin: 0 0 1.4rem auto; }
+.lights i { width: 1.5rem; height: 1.5rem; border-radius: 50%; background: #2a0a0a; box-shadow: inset 0 0 0 2px #050507; animation: light 7s linear infinite; }
+@keyframes light {
+  0%, 7% { background: #2a0a0a; box-shadow: inset 0 0 0 2px #050507; }
+  8%, 68% { background: var(--lab-accent); box-shadow: inset 0 0 0 2px #050507, 0 0 14px rgba(225, 6, 0, 0.9); }
+  70%, 100% { background: #2a0a0a; box-shadow: inset 0 0 0 2px #050507; }
 }
+.lights i:nth-child(2) { animation-name: light2; }
+.lights i:nth-child(3) { animation-name: light3; }
+.lights i:nth-child(4) { animation-name: light4; }
+.lights i:nth-child(5) { animation-name: light5; }
+@keyframes light2 { 0%, 19% { background: #2a0a0a; } 20%, 68% { background: var(--lab-accent); box-shadow: inset 0 0 0 2px #050507, 0 0 14px rgba(225, 6, 0, 0.9); } 70%, 100% { background: #2a0a0a; } }
+@keyframes light3 { 0%, 31% { background: #2a0a0a; } 32%, 68% { background: var(--lab-accent); box-shadow: inset 0 0 0 2px #050507, 0 0 14px rgba(225, 6, 0, 0.9); } 70%, 100% { background: #2a0a0a; } }
+@keyframes light4 { 0%, 43% { background: #2a0a0a; } 44%, 68% { background: var(--lab-accent); box-shadow: inset 0 0 0 2px #050507, 0 0 14px rgba(225, 6, 0, 0.9); } 70%, 100% { background: #2a0a0a; } }
+@keyframes light5 { 0%, 55% { background: #2a0a0a; } 56%, 68% { background: var(--lab-accent); box-shadow: inset 0 0 0 2px #050507, 0 0 14px rgba(225, 6, 0, 0.9); } 70%, 100% { background: #2a0a0a; } }
 
-.pw-hero p {
-  position: relative;
-  max-width: 42ch;
-  color: var(--pw-muted);
-}
+/* red-and-white kerb under the hero */
+.kerb { height: 14px; margin-top: 2.2rem; background: repeating-linear-gradient(90deg, var(--lab-accent) 0 34px, #f0f0f0 34px 68px); }
 
-.pw-eyebrow {
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--pw-red-text) !important;
-}
+/* pit boards: what a team shows its driver from the pit wall ------------------ */
+.boards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr)); gap: 1.3rem; }
+.board { background: var(--pw-board); border: 1px solid var(--lab-line); border-radius: 10px; padding: 0 1.2rem 1.2rem; min-width: 0; position: relative; }
+.board::before { content: ""; display: block; height: 6px; margin: 0 -1.2rem 1rem; border-radius: 10px 10px 0 0; background: repeating-linear-gradient(90deg, var(--pw-yellow) 0 18px, #0b0b10 18px 36px); }
+.board .plate { display: inline-block; font: 700 0.74rem var(--lab-mono); letter-spacing: 0.14em; text-transform: uppercase; color: #0b0b10; background: var(--pw-yellow); padding: 0.15rem 0.5rem; border-radius: 3px; margin-bottom: 0.6rem; }
+.board b { display: block; font: 900 clamp(2.2rem, 5vw, 3rem)/1 var(--lab-display); color: var(--lab-ink); font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
+.board b small { font-size: 1rem; font-weight: 600; color: var(--lab-muted); }
+.board p { margin: 0.5rem 0 0; color: var(--lab-soft); font-size: 0.92rem; }
 
-.pw-hero .pw-car {
-  position: absolute;
-  right: -30px;
-  bottom: 0;
-  width: min(58%, 560px);
-  height: auto;
-}
+/* tyres ------------------------------------------------------------------------ */
+.pw-legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem; align-items: center; margin: 0 0 0.6rem; font-size: 0.85rem; color: var(--lab-soft); }
+.pw-legend span { display: inline-flex; align-items: center; gap: 0.35rem; }
+.tyres-inline { display: inline-flex; gap: 2px; vertical-align: middle; }
 
-/* Red-and-white kerb under the hero */
-.pw-kerb {
-  height: 10px;
-  margin-bottom: 2rem;
-  border-radius: 0 0 4px 4px;
-  background: repeating-linear-gradient(90deg, var(--pw-red) 0 28px, var(--pw-ink) 28px 56px);
-}
+/* the undercut in three steps ----------------------------------------------------- */
+.steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1.6rem; }
+@media (max-width: 900px) { .steps { grid-template-columns: 1fr; } }
+.step { background: var(--lab-panel); border: 1px solid var(--lab-line); border-radius: 12px; padding: 1rem 1.1rem; }
+.step b { display: block; margin-bottom: 0.3rem; }
+.step p { margin: 0; color: var(--lab-soft); font-size: 0.92rem; }
+.step .track { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.7rem; font: 700 0.75rem var(--lab-mono); }
+.step .carA, .step .carB { display: inline-block; padding: 0.12rem 0.5rem; border-radius: 4px; }
+.step .carA { background: var(--lab-series-1); color: #fff; }
+.step .carB { background: var(--lab-series-2); color: #fff; }
+.step .pit { color: var(--lab-muted); border: 1px dashed var(--lab-muted); padding: 0.1rem 0.4rem; border-radius: 4px; }
 
-/* Tyre badges and legends */
-.pw-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem 1.2rem;
-  align-items: center;
-  margin: 0.5rem 0 0.25rem;
-  color: var(--pw-muted);
-  font-size: 0.9rem;
-}
+/* the pipeline as one lap of a circuit ----------------------------------------- */
+.circuit { width: 100%; height: auto; display: block; }
+.circuit .tarmac { fill: none; stroke: #33333f; stroke-width: 30; stroke-linejoin: round; stroke-linecap: round; }
+.circuit .centre { fill: none; stroke: #6b6b7b; stroke-width: 1.5; stroke-dasharray: 10 12; stroke-linejoin: round; }
+.circuit .kerbs { fill: none; stroke: var(--lab-accent); stroke-width: 6; stroke-dasharray: 12 12; stroke-linecap: butt; }
+.circuit .stop { fill: #f0f0f0; stroke: #0b0b10; stroke-width: 3; }
+.circuit .sector { font: 800 13px var(--lab-display); fill: #0b0b10; text-anchor: middle; }
+.circuit text { font: 700 15px var(--lab-display); fill: var(--lab-ink); }
+.circuit text.small { font: 400 12.5px var(--lab-sans); fill: var(--lab-muted); }
+.pw-lap { display: none; list-style: none; margin: 0; padding: 0; }
+.pw-lap li { display: grid; grid-template-columns: 2.6rem 1fr; gap: 0 0.8rem; padding: 0.7rem 0; border-bottom: 1px dashed var(--lab-line); }
+.pw-lap li:last-child { border-bottom: 0; }
+.pw-lap .pw-sector { grid-row: span 2; display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border-radius: 50%; background: #f0f0f0; color: #0b0b10; font: 800 0.85rem var(--lab-display); }
+.pw-lap small { color: var(--lab-muted); }
+@media (max-width: 760px) { .circuit { display: none; } .pw-lap { display: block; } }
 
-.pw-legend span {
-  display: inline-flex;
-  gap: 0.35rem;
-  align-items: center;
-}
+/* inputs and tables on the dark surface */
+form.inputs-3a86ea-table, .inputs-3a86ea-table { max-width: none; }
+.panel table { font-size: 0.88rem; }
 
-.pw-swatch {
-  display: inline-block;
-  width: 18px;
-  height: 12px;
-  border-radius: 2px;
-}
-
-.pw-question {
-  text-decoration: none;
-}
-
-.pw-question h2,
-.pw-question p {
-  color: var(--pw-ink);
-}
-
-.pw-question p {
-  color: var(--pw-muted);
-}
-
-.pw-question h2 {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.pw-lap {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 0;
-  margin: 1.5rem 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: none;
-}
-
-.pw-lap li {
-  position: relative;
-  padding: 0.9rem 0.9rem 1rem;
-  border-top: 4px solid var(--pw-red);
-  background: var(--pw-panel);
-}
-
-.pw-lap li:nth-child(even) {
-  border-top-color: var(--pw-ink);
-}
-
-.pw-lap li + li {
-  border-left: 1px solid var(--pw-line);
-}
-
-.pw-lap strong {
-  display: block;
-  margin-top: 0.4rem;
-}
-
-.pw-lap small {
-  color: var(--pw-muted);
-}
-
-.pw-sector {
-  font-size: 0.75rem;
-  font-weight: 900;
-  font-style: italic;
-  color: var(--pw-red-text);
-}
-
-@media (max-width: 640px) {
-  .pw-hero .pw-car {
-    position: relative;
-    right: 0;
-    width: 100%;
-  }
+@media (prefers-reduced-motion: reduce) {
+  .lights i { animation: none; background: var(--lab-accent); box-shadow: inset 0 0 0 2px #050507, 0 0 10px rgba(225, 6, 0, 0.7); }
 }
