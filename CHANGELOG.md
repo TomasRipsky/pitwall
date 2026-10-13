@@ -5,12 +5,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-13
+
+The first release of pitwall as its own repository. Nothing changes in what the pipeline does or shows.
+
 ### Changed
 - pitwall lives in its own repository, extracted with its history from the
   [Data Engineering Lab](https://github.com/TomasRipsky/data-engineering-lab) monorepo (lab ADR 0007).
   Commits made before the move name lab issues and pull requests as `data-engineering-lab#N`.
 - The dashboard is this repository's own GitHub Pages site: https://tomasripsky.github.io/pitwall/
-  (the old address redirects). Pages sit at the site root and `make site-data` writes to `site/src/data`.
+  (the lab's site redirects the old address). Pages sit at the site root and `make site-data` writes to `site/src/data`.
 - CI runs on every pull request (no path filters), and Workload Identity Federation trusts this
   repository instead of the lab.
 
