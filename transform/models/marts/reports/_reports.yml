@@ -1,0 +1,370 @@
+version: 2
+
+# Report models: what the public site reads. `pitwall site-export` copies each one to a Parquet file
+# as it is, so every column here is browser-friendly (dates as strings, rounded numbers) and every
+# number on the site can be traced to rows of these tables.
+
+models:
+  - name: rpt_races
+    description: "Grain: one row per Race or Sprint session. The race list of the site, with what each race looked like and how complete its data is."
+    columns:
+      - name: session_key
+        description: "{{ doc('session_key') }}"
+        data_tests: [unique, not_null]
+      - name: meeting_key
+        description: "{{ doc('meeting_key') }}"
+      - name: season
+        description: Championship year.
+        data_tests: [not_null]
+      - name: session_name
+        description: '"Race" (Sunday, full distance) or "Sprint" (Saturday, about a third of the distance, no mandatory pit stop).'
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [Race, Sprint]
+      - name: race_date
+        description: Start date (UTC) as YYYY-MM-DD text.
+        data_tests: [not_null]
+      - name: meeting_name
+        description: Name of the Grand Prix.
+      - name: country_name
+        description: Host country.
+      - name: circuit_short_name
+        description: Short circuit name.
+      - name: circuit_type
+        description: Permanent track, temporary street circuit or temporary road circuit.
+      - name: laps
+        description: Laps run by the leader (the highest lap number recorded).
+      - name: drivers
+        description: Drivers with at least one recorded lap.
+      - name: driver_laps
+        description: Laps recorded across all drivers.
+      - name: timed_laps_share
+        description: Share of recorded laps that have a lap time (0–1). The source has gaps, mostly on lap 1 and pit laps.
+      - name: neutralised_laps
+        description: Lap numbers on which at least one car ran under the Safety Car, the Virtual Safety Car or a red flag.
+      - name: red_flag_laps
+        description: Lap numbers run under a red flag (race stopped).
+      - name: pit_stops
+        description: Pit stops of all drivers.
+      - name: pit_stops_under_neutralisation
+        description: Stops made while the race was neutralised, when stopping costs much less time.
+      - name: pit_timing
+        description: "Where the stops come from: official (timed pit data), inferred (from tyre changes, no timing — some 2023 races), mixed, or none."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [official, inferred, mixed, none]
+      - name: median_pit_lane_s
+        description: Median time in the pit lane for stops under green flag, in seconds. What a stop really costs at this circuit.
+      - name: grid_published
+        description: Whether the source published a starting grid for this session (Sprint grids are often missing).
+      - name: winner_driver_number
+        description: Car number of the winner.
+      - name: winner_name
+        description: Winner's full name.
+      - name: winner_acronym
+        description: Winner's three-letter code.
+      - name: winner_team
+        description: Winner's team.
+      - name: winner_team_colour_hex
+        description: Winner's team colour (hex, no leading hash).
+      - name: winner_grid_position
+        description: Where the winner started. Null when the grid was not published.
+
+  - name: rpt_driver_races
+    description: "Grain: one row per driver per Race or Sprint session. Where they started and finished, how they got there (stops, tyres) and how fast they were."
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [session_key, driver_number]
+    columns:
+      - name: session_key
+        description: "{{ doc('session_key') }}"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('rpt_races')
+                field: session_key
+      - name: driver_number
+        description: Car number.
+        data_tests: [not_null]
+      - name: season
+        description: Championship year.
+      - name: session_name
+        description: Race or Sprint.
+      - name: race_date
+        description: Start date (UTC) as YYYY-MM-DD text.
+      - name: meeting_name
+        description: Name of the Grand Prix.
+      - name: circuit_short_name
+        description: Short circuit name.
+      - name: circuit_type
+        description: Permanent, street or road circuit.
+      - name: full_name
+        description: Driver's full name.
+        data_tests: [not_null]
+      - name: name_acronym
+        description: Driver's three-letter code.
+      - name: team_name
+        description: Team in this session.
+      - name: team_colour_hex
+        description: Team colour (hex, no leading hash).
+      - name: grid_position
+        description: Starting position. Null when the grid was not published.
+      - name: finish_position
+        description: Classified finishing position. Null when not classified.
+      - name: positions_gained
+        description: Grid position minus finishing position (positive = moved forward).
+      - name: points
+        description: Championship points scored.
+      - name: laps_completed
+        description: Laps completed.
+      - name: status
+        description: Finished, DNF (did not finish), DNS (did not start) or DSQ (disqualified).
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [Finished, DNF, DNS, DSQ]
+      - name: pit_stops
+        description: Pit stops made (0 when none recorded).
+      - name: tyres
+        description: 'The strategy in one string: first letter of each compound in stint order, e.g. "M-H-H".'
+      - name: median_clean_lap_s
+        description: Median lap time over clean laps (no pit lap, no neutralisation, no outliers), in seconds.
+      - name: best_lap_s
+        description: Fastest clean lap, in seconds.
+      - name: pace_gap_pct
+        description: Median clean lap compared with the whole field's median clean lap in the same session, in percent. Negative = faster than the field.
+      - name: top_speed_kph
+        description: Highest speed-trap reading.
+
+  - name: rpt_laps
+    description: "Grain: one row per lap of a driver. The lap chart (position by lap) and the pace charts read this; it carries only the columns they need."
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [session_key, driver_number, lap_number]
+    columns:
+      - name: session_key
+        description: "{{ doc('session_key') }}"
+        data_tests: [not_null]
+      - name: driver_number
+        description: Car number.
+      - name: lap_number
+        description: Lap number, starting at 1.
+      - name: position
+        description: Position at the end of the lap. Null where the source has no position near the lap end.
+      - name: lap_time_s
+        description: Lap time in seconds. Null for timing gaps.
+      - name: compound
+        description: "{{ doc('compound') }}"
+      - name: tyre_age_laps
+        description: Laps this set of tyres had run at the end of the lap.
+      - name: neutralisation
+        description: "{{ doc('neutralisation') }}"
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [SC, VSC, RED]
+      - name: is_pit_lap
+        description: The lap entered or left the pits.
+      - name: is_clean_lap
+        description: A representative racing lap (no pit lap, no neutralisation, not lap 1, not an outlier).
+
+  - name: rpt_stints
+    description: "Grain: one row per stint — the laps a driver ran on one set of tyres — with who, where and how the race ended for them."
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [session_key, driver_number, stint_number]
+    columns:
+      - name: session_key
+        description: "{{ doc('session_key') }}"
+        data_tests: [not_null]
+      - name: driver_number
+        description: Car number.
+      - name: stint_number
+        description: Order of the stint in the driver's race, starting at 1.
+      - name: season
+        description: Championship year.
+      - name: session_name
+        description: Race or Sprint.
+      - name: meeting_name
+        description: Name of the Grand Prix.
+      - name: circuit_short_name
+        description: Short circuit name.
+      - name: name_acronym
+        description: Driver's three-letter code.
+      - name: full_name
+        description: Driver's full name.
+      - name: team_name
+        description: Team in this session.
+      - name: team_colour_hex
+        description: Team colour (hex, no leading hash).
+      - name: compound
+        description: "{{ doc('compound') }}"
+      - name: first_lap
+        description: First lap of the stint.
+      - name: last_lap
+        description: Last lap of the stint.
+      - name: laps_in_stint
+        description: Laps run on this set in this session.
+      - name: tyre_age_at_start
+        description: Laps the set had already run before the stint (0 = new).
+      - name: clean_laps
+        description: Clean laps in the stint, the ones wear is measured on.
+      - name: degradation_s_per_lap
+        description: Seconds lost per lap as the tyre ages (slope of clean lap times). Not corrected for fuel.
+      - name: finish_position
+        description: Where the driver finished.
+      - name: grid_position
+        description: Where the driver started.
+
+  - name: rpt_pit_stops
+    description: "Grain: one row per pit stop, with who made it, where, how long it took and what was running at the time."
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [session_key, driver_number, lap_number]
+    columns:
+      - name: session_key
+        description: "{{ doc('session_key') }}"
+        data_tests: [not_null]
+      - name: driver_number
+        description: Car number.
+      - name: lap_number
+        description: Lap on which the car entered the pits.
+      - name: season
+        description: Championship year.
+      - name: session_name
+        description: Race or Sprint.
+      - name: race_date
+        description: Start date (UTC) as YYYY-MM-DD text.
+      - name: meeting_name
+        description: Name of the Grand Prix.
+      - name: circuit_short_name
+        description: Short circuit name.
+      - name: name_acronym
+        description: Driver's three-letter code.
+      - name: full_name
+        description: Driver's full name.
+      - name: team_name
+        description: Team in this session.
+      - name: team_colour_hex
+        description: Team colour (hex, no leading hash).
+      - name: pit_lane_time_s
+        description: Time from pit entry to pit exit, in seconds. Null for inferred stops.
+      - name: stationary_time_s
+        description: Time the car stood still for the tyre change, in seconds. Published by the source from 2024 only.
+      - name: source
+        description: '"pit" = official timed pit data; "stint_change" = inferred from a tyre change, no timing.'
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [pit, stint_change]
+      - name: compound_before
+        description: Tyre taken off.
+      - name: compound_after
+        description: Tyre fitted.
+      - name: position_before
+        description: Position at the end of the lap before the stop.
+      - name: position_after
+        description: Position at the end of the lap after the stop.
+      - name: neutralisation
+        description: "{{ doc('neutralisation') }}"
+      - name: is_under_neutralisation
+        description: The stop was made under the Safety Car, the Virtual Safety Car or a red flag.
+
+  - name: rpt_tyre_wear
+    description: "Grain: one row per circuit (or 'All circuits') x dry compound x tyre age. How much slower a lap is than the average of its own stint as the tyre ages, raw and fuel-corrected."
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [circuit_short_name, compound, tyre_age_laps]
+    columns:
+      - name: circuit_short_name
+        description: Short circuit name, or "All circuits".
+        data_tests: [not_null]
+      - name: compound
+        description: SOFT, MEDIUM or HARD.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [SOFT, MEDIUM, HARD]
+      - name: tyre_age_laps
+        description: Laps the set had run.
+      - name: median_delta_s
+        description: Median of (lap time − the stint's average lap time), in seconds. Positive = slower than the stint average.
+      - name: median_delta_fuel_corrected_s
+        description: The same after adding back the time the car gains each lap by burning fuel.
+      - name: laps
+        description: Clean laps behind the median (always 5 or more).
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 5
+      - name: fuel_s_per_lap
+        description: The fuel assumption used, in seconds gained per lap.
+
+  - name: rpt_undercuts
+    description: "Grain: one row per undercut attempt — an attacker pitting before the car directly ahead — and whether it worked."
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [session_key, attacker_driver_number, defender_driver_number, attacker_pit_lap]
+    columns:
+      - name: session_key
+        description: "{{ doc('session_key') }}"
+        data_tests: [not_null]
+      - name: attacker_driver_number
+        description: Car number of the driver who pitted first.
+      - name: defender_driver_number
+        description: Car number of the driver directly ahead.
+      - name: attacker_pit_lap
+        description: Lap on which the attacker pitted.
+      - name: defender_pit_lap
+        description: Lap on which the defender answered.
+      - name: laps_between_stops
+        description: Laps the defender waited before pitting too (1 to 3 by definition).
+      - name: season
+        description: Championship year.
+      - name: session_name
+        description: Race or Sprint.
+      - name: meeting_name
+        description: Name of the Grand Prix.
+      - name: circuit_short_name
+        description: Short circuit name.
+      - name: attacker
+        description: Attacker's three-letter code.
+      - name: attacker_team
+        description: Attacker's team.
+      - name: defender
+        description: Defender's three-letter code.
+      - name: defender_team
+        description: Defender's team.
+      - name: is_success
+        description: The attacker was ahead once both had pitted. Null when positions are missing.
+      - name: attacker_pitted_under_neutralisation
+        description: The attacker's stop was under a Safety Car or VSC, where an undercut means little.
+
+  - name: rpt_neutralisations
+    description: "Grain: one row per session x lap number x kind of neutralisation. Used to shade race charts."
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [session_key, lap_number, neutralisation]
+    columns:
+      - name: session_key
+        description: "{{ doc('session_key') }}"
+        data_tests: [not_null]
+      - name: lap_number
+        description: Lap number.
+      - name: neutralisation
+        description: "{{ doc('neutralisation') }}"
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [SC, VSC, RED]

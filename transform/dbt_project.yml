@@ -8,6 +8,11 @@ test-paths: ["tests"]
 
 clean-targets: ["target", "dbt_packages"]
 
+vars:
+  # Lap time gained per lap as fuel burns (about 1.8 kg per lap x ~0.03 s per kg): a common
+  # modelling assumption in F1 analysis, shown and explained on the site.
+  fuel_s_per_lap: 0.055
+
 data_tests:
   pitwall:
     +store_failures: true # failing rows land in the `audit` dataset for inspection
