@@ -8,7 +8,7 @@ The walkthrough: read this after the [README](../README.md) to understand the in
 2. [`src/pitwall/ingest.py`](../src/pitwall/ingest.py) — the unit of work (one Grand Prix) and the marker dance that makes re-runs safe.
 3. [`src/pitwall/contracts.py`](../src/pitwall/contracts.py) — what the API is allowed to send us.
 4. [`transform/models/`](../transform/models/) — staging → intermediate → marts; each mart states its grain.
-5. [`.github/workflows/pitwall-pipeline.yml`](../../../.github/workflows/pitwall-pipeline.yml) — how the whole thing runs on Mondays in prod.
+5. [`.github/workflows/pitwall-pipeline.yml`](../.github/workflows/pitwall-pipeline.yml) — how the whole thing runs on Mondays in prod.
 
 ## Architecture
 
@@ -17,7 +17,7 @@ The walkthrough: read this after the [README](../README.md) to understand the in
 - **Raw lake** — Parquet files on GCS (`gs://pitwall-tr-<env>-raw`), or a local folder offline. The replayable source of truth: everything downstream can be rebuilt from it without calling the API again.
 - **`pitwall load`** — rebuilds each BigQuery `raw.openf1_<endpoint>` table from the marked files, in full.
 - **dbt** — SQL models in BigQuery: staging (clean names and types) → intermediate (racing rules) → marts (one table per question, with a stated grain), tested on every build.
-- **`site-export`** — queries the marts and writes six small Parquet files for the lab site.
+- **`site-export`** — queries the marts and writes six small Parquet files for the site.
 - **Lab site** — Observable Framework, static, on GitHub Pages. Never touches BigQuery.
 
 ## Components explained
@@ -355,7 +355,7 @@ The absent-field warning fires only when a field is missing from *every* record 
 So the signals to watch are a **failed pipeline run** (GitHub emails it) or a **contract warning in the run logs**. Then:
 
 1. **Open an issue and a branch** as usual.
-2. **Re-record:** from `projects/pitwall`, run `uv run python tests/record_fixtures.py`. It deletes the old recordings, calls the real API (22 requests, ~45 s, no key needed) and writes the new ones.
+2. **Re-record:** from the repository root, run `uv run python tests/record_fixtures.py`. It deletes the old recordings, calls the real API (22 requests, ~45 s, no key needed) and writes the new ones.
 3. **See what changed:** `git diff tests/fixtures/` — the diff *is* the API change, field by field.
 4. **Run the tests:** `make test`. `test_recorded_responses_match_the_contract_exactly` names each new, renamed or missing field per endpoint.
 5. **Decide, field by field:**
@@ -742,7 +742,7 @@ Every job starts on a **clean machine** that is thrown away afterwards: nothing 
 
 #### 2. `pitwall-ci`: what checks a pull request
 
-Triggered by any PR that touches `projects/pitwall/**`, `site/**` or these workflows (a **path filter**: a docs-only PR elsewhere doesn't spend CI minutes on pitwall). Five jobs, about 2–3 minutes in total (last run: dbt 2 min 14 s, everything else under 30 s):
+Triggered by **every** pull request. (While pitwall lived in the lab's monorepo this workflow had a *path filter* — it ran only when pitwall's folders changed — and that had a hole: a PR touching nothing in the filter reported no checks at all, which a merge gate reads as "nothing failed". In its own repository the whole repository is the project, so there is nothing to filter.) Five jobs, about 2–3 minutes in total (last run: dbt 2 min 14 s, everything else under 30 s):
 
 ```
 python      uv sync --locked → make lint (ruff) → make test (pytest, 90+ tests, no cloud)
@@ -780,7 +780,7 @@ site-data (environment: prod)              ← only if `run` succeeded; dashboar
 site-build                                  ← no cloud credentials at all
   npm ci --ignore-scripts → npm run build → upload Pages artifact
 deploy (environment: github-pages)
-  publish to https://tomasripsky.github.io/data-engineering-lab/
+  publish to https://tomasripsky.github.io/pitwall/
 ```
 
 A release run took about 5 minutes end to end (run 3.5 min, site 1 min, deploy 15 s). A Monday run with a new Grand Prix adds ~1 minute of API calls per race weekend.
