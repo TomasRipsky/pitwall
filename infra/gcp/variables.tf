@@ -22,13 +22,13 @@ variable "region" {
 variable "github_repository" {
   description = "owner/name of the repository allowed to use Workload Identity Federation."
   type        = string
-  default     = "TomasRipsky/data-engineering-lab"
+  default     = "TomasRipsky/pitwall"
 }
 
 variable "github_repository_id" {
   description = "Immutable numeric ID of that repository (a renamed or recreated repo gets a new one)."
   type        = string
-  default     = "1396373223"
+  default     = "1417739900"
 }
 
 variable "query_quota_mib_per_day" {
