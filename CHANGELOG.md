@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-14
+
 ### Changed
 - **The site is a story page and a BI page** ([ADR 0008](docs/decisions/0008-showcase-site-story-and-bi.md)), in the style of the lab's other showcases. The story: the answers on six pit boards, a race explorer with strategy and lap chart, tyres, pit stops, the undercut, grid against finish, a case file chosen by the data, the pipeline as one lap of a circuit, decisions, quality and limits. The BI page: filters by season, session, circuit and team, KPIs, drivers, teams, circuits, tyres, the pit-stop log and data quality by race, with CSV downloads. The four old page URLs redirect to their sections.
 - What the site reads is decided in dbt: eight `rpt_*` report models (one grain each, documented, tested) replace the SQL that lived in `site_data.py`; `pitwall site-export` only copies them.
