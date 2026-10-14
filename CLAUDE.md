@@ -10,7 +10,7 @@ If this session started here instead, read the lab's `CLAUDE.md` before changing
 What lives in this repository:
 
 - `README.md` — what pitwall does, how to run it, cost and teardown.
-- `docs/guide.md` — how it works inside (being written: issue #1). `docs/decisions/` — its ADRs. `docs/design/` — specs and plans (records).
+- `docs/guide.md` — how it works inside (still growing: issue #1). `docs/decisions/` — its ADRs. `docs/design/` — specs and plans (records).
 - `site/` — the public dashboard (`site/README.md`). `infra/gcp/` — Terraform; state is local, never committed.
 
 Git here follows the lab's flow: issue → `<type>/<issue#>-<slug>` from `dev` → PR into `dev` → squash;
