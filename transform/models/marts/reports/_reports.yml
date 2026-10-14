@@ -126,7 +126,9 @@ models:
       - name: positions_gained
         description: Grid position minus finishing position (positive = moved forward).
       - name: points
-        description: Championship points scored.
+        description: Championship points scored (see fct_session_results for the ten 2023 results filled from the points table).
+      - name: is_points_corrected
+        description: The source gave no points for this result and they were filled from the points table (issue #21).
       - name: laps_completed
         description: Laps completed.
       - name: status

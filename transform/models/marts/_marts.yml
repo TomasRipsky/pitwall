@@ -158,7 +158,12 @@ models:
       - name: positions_gained
         description: Grid position minus finishing position — positive means the driver moved forward.
       - name: points
-        description: Championship points scored.
+        description: >
+          Championship points scored, as the source reports them — except where it gives none to a
+          classified finisher inside the points table (ten 2023 results, issue #21): those come from
+          the table, plus the fastest-lap point where it applied (Races up to 2024).
+      - name: is_points_corrected
+        description: The source gave no points for this result and they were filled from the points table.
       - name: laps_completed
         description: Laps completed.
       - name: did_not_finish
@@ -308,11 +313,65 @@ unit_tests:
           - {session_key: 14, meeting_key: 1, session_type: Qualifying, session_name: Sprint Qualifying}
           - {session_key: 21, meeting_key: 2, session_type: Race, session_name: Sprint}
           - {session_key: 23, meeting_key: 2, session_type: Qualifying, session_name: Sprint Shootout}
+      - input: ref('stg_openf1__laps')
+        rows: []
     expect:
       rows:
         - {session_key: 11, driver_number: 4, grid_position: 5, finish_position: 1, positions_gained: 4}
         - {session_key: 12, driver_number: 4, grid_position: 2, finish_position: 3, positions_gained: -1}
         - {session_key: 21, driver_number: 4, grid_position: 7, finish_position: 2, positions_gained: 5}
+
+  - name: test_points_fill_source_zeros_from_the_table
+    # OpenF1 gave 0 points to ten classified 2023 finishers (Saudi Arabia P2, United States P2-P10).
+    # A zero inside the points table is filled from it, plus the fastest-lap point where it applied
+    # (Races up to 2024); real points, disqualified and unclassified drivers, places outside the table and
+    # sessions paid on a smaller table (a race stopped early) stay as they are.
+    model: fct_session_results
+    given:
+      - input: ref('stg_openf1__session_result')
+        rows:
+          - {session_key: 31, meeting_key: 3, driver_number: 1, finish_position: 1, points: 25}
+          - {session_key: 31, meeting_key: 3, driver_number: 11, finish_position: 2, points: 0}
+          - {session_key: 31, meeting_key: 3, driver_number: 14, finish_position: 3, points: 15}
+          - {session_key: 31, meeting_key: 3, driver_number: 16, finish_position: 11, points: 0}
+          - {session_key: 31, meeting_key: 3, driver_number: 44, finish_position: null, points: 0}
+          - {session_key: 31, meeting_key: 3, driver_number: 55, finish_position: 5, points: 0, disqualified: true}
+          - {session_key: 32, meeting_key: 4, driver_number: 4, finish_position: 2, points: 0}
+          - {session_key: 32, meeting_key: 4, driver_number: 81, finish_position: 1, points: 25}
+          - {session_key: 33, meeting_key: 3, driver_number: 1, finish_position: 1, points: null}
+          # session 34: a race stopped early pays a smaller table (6-4-3-2-1): its zeros are real
+          - {session_key: 34, meeting_key: 5, driver_number: 1, finish_position: 1, points: 6}
+          - {session_key: 34, meeting_key: 5, driver_number: 63, finish_position: 6, points: 0}
+      - input: ref('stg_openf1__starting_grid')
+        rows: []
+      - input: ref('stg_openf1__sessions')
+        rows:
+          - {session_key: 31, meeting_key: 3, session_type: Race, session_name: Race, season: 2023}
+          - {session_key: 32, meeting_key: 4, session_type: Race, session_name: Race, season: 2025}
+          - {session_key: 33, meeting_key: 3, session_type: Race, session_name: Sprint, season: 2023}
+          - {session_key: 34, meeting_key: 5, session_type: Race, session_name: Race, season: 2024}
+      - input: ref('stg_openf1__laps')
+        rows:
+          - {session_key: 31, driver_number: 1, lap_time_s: 91.0, started_at: "2023-03-19 18:30:00"}
+          - {session_key: 31, driver_number: 11, lap_time_s: 90.0, started_at: "2023-03-19 18:40:00"}
+          # in 2025 the fastest lap belongs to the winner, whose real points must stay 25
+          - {session_key: 32, driver_number: 81, lap_time_s: 79.0, started_at: "2025-03-16 05:20:00"}
+          - {session_key: 32, driver_number: 4, lap_time_s: 80.0, started_at: "2025-03-16 05:30:00"}
+          - {session_key: 33, driver_number: 1, lap_time_s: 70.0, started_at: "2023-03-18 15:30:00"}
+          - {session_key: 34, driver_number: 63, lap_time_s: 100.0, started_at: "2024-06-01 15:30:00"}
+    expect:
+      rows:
+        - {session_key: 31, driver_number: 1, points: 25, is_points_corrected: false}
+        - {session_key: 31, driver_number: 11, points: 19, is_points_corrected: true}
+        - {session_key: 31, driver_number: 14, points: 15, is_points_corrected: false}
+        - {session_key: 31, driver_number: 16, points: 0, is_points_corrected: false}
+        - {session_key: 31, driver_number: 44, points: 0, is_points_corrected: false}
+        - {session_key: 31, driver_number: 55, points: 0, is_points_corrected: false}
+        - {session_key: 32, driver_number: 4, points: 18, is_points_corrected: true}
+        - {session_key: 32, driver_number: 81, points: 25, is_points_corrected: false}
+        - {session_key: 33, driver_number: 1, points: 8, is_points_corrected: true}
+        - {session_key: 34, driver_number: 1, points: 6, is_points_corrected: false}
+        - {session_key: 34, driver_number: 63, points: 0, is_points_corrected: false}
 
   - name: test_degradation_is_the_slope_of_clean_laps  # also: invalid stint 3 never reaches the mart
     model: fct_stints

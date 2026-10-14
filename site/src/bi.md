@@ -293,6 +293,8 @@ const stopTable = Inputs.table(stopRows, {
   rows: 14,
   format: {"Pit lane (s)": (x) => fmt.one(x), "Stationary (s)": (x) => (x == null ? "—" : x.toFixed(2)), "Position before": (x) => x ?? "—", "Position after": (x) => x ?? "—"}
 });
+// results the source scored as zero although the driver finished inside the points table (issue #21)
+const fixedPoints = d3.rollup(driverRaces.filter((d) => d.is_points_corrected), (v) => v.length, (d) => d.session_key);
 const qualityRows = d3
   .sort(fRaces, (d) => d.race_date)
   .reverse()
@@ -304,7 +306,8 @@ const qualityRows = d3
     "Laps with a time": d.timed_laps_share,
     "Pit timing": d.pit_timing,
     "Grid published": d.grid_published ? "yes" : "no",
-    "Neutralised laps": d.neutralised_laps
+    "Neutralised laps": d.neutralised_laps,
+    "Points filled in": fixedPoints.get(d.session_key) ?? 0
   }));
 const qualityTable = Inputs.table(qualityRows, {select: false, rows: 14, format: {"Laps with a time": (x) => (x == null ? "—" : `${(100 * x).toFixed(1)}%`)}});
 ```
@@ -335,9 +338,9 @@ const qualityTable = Inputs.table(qualityRows, {select: false, rows: 14, format:
 <section id="drivers" class="band">
 <div class="wrap">
   <h2><span class="num"><i>D</i></span>Drivers</h2>
-  <p class="sub"><b>Places gained</b> is grid position minus finishing position, added up. <b>Pace gap</b> compares the driver's typical clean lap with the whole field's in the same race: negative is faster than the field. Sprint grids are often unpublished, so Sprints add little to the grid columns.</p>
+  <p class="sub"><b>Points follow the Session filter</b>: championship totals include Sprints, so choose <b>Both</b> to compare with the official standings. ${fmt.count(driverRaces.filter((d) => d.is_points_corrected).length)} results that the source scored as zero although the driver finished in the points are filled from the points table (counted on the data-quality table). <b>Places gained</b> is grid position minus finishing position, added up. <b>Pace gap</b> compares the driver's typical clean lap with the whole field's in the same race: negative is faster than the field. Sprint grids are often unpublished, so Sprints add little to the grid columns.</p>
   <div class="panel">
-    <h3>Points <small>top 15 in this selection · bars in the team's colour</small></h3>
+    <h3>${session !== all ? `${session} points only` : season !== all && circuit === all ? "Championship points" : "Points"} <small>top 15 in this selection · bars in the team's colour${session === all ? "" : " · choose Both for championship totals"}</small></h3>
     ${resize((width) => pointsChart(width))}
   </div>
   <div class="panel mt">
@@ -400,7 +403,7 @@ const qualityTable = Inputs.table(qualityRows, {select: false, rows: 14, format:
 
 <section id="quality" class="wrap">
   <h2><span class="num"><i>Q</i></span>Data quality, race by race</h2>
-  <p class="sub">How complete the source was for each race: the share of laps that have a time, whether pit stops were timed officially or inferred from tyre changes, and whether a starting grid was published. A number built on thin data should say so.</p>
+  <p class="sub">How complete the source was for each race: the share of laps that have a time, whether pit stops were timed officially or inferred from tyre changes, whether a starting grid was published, and how many results it scored as zero although the driver finished in the points (filled from the points table). A number built on thin data should say so.</p>
   <div class="panel">
     <div class="table-head"><h3>${fmt.count(qualityRows.length)} sessions <small>${team === all ? "" : "a team does not narrow this table"}</small></h3>${downloadButton(qualityRows, "pitwall-data-quality.csv")}</div>
     ${qualityRows.length ? qualityTable : emptyState("sessions")}
