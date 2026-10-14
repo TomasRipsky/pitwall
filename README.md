@@ -9,7 +9,7 @@
 ```mermaid
 flowchart LR
   api[OpenF1 API] --> ingest[pitwall ingest] --> lake[(Raw lake: Parquet + markers)]
-  lake --> load[pitwall load] --> bq[(BigQuery raw)] --> dbt[dbt: staging → marts] --> export[site-export] --> site[Site on GitHub Pages]
+  lake --> load[pitwall load] --> bq[(BigQuery raw)] --> dbt[dbt: staging → marts → reports] --> export[site-export] --> site[Site on GitHub Pages]
 ```
 
 ## Tech stack
@@ -22,7 +22,7 @@ flowchart LR
 | Infrastructure | Terraform + `make bootstrap` | One root, workspace per env, no keys (Workload Identity Federation) |
 | Transformation | dbt (BigQuery) | Tested SQL with stated grains; unit tests pin the racing rules |
 | Orchestration | GitHub Actions (cron + manual dispatch) | Free, public runs, WIF auth — [ADR 0006](docs/decisions/0006-github-actions-as-orchestrator.md) |
-| Dashboard | Observable Framework on GitHub Pages ([site/](site/)) | Static, keyless, the lab's shared structure + its own look — [ADR 0007](docs/decisions/0007-observable-framework-for-the-dashboard.md) |
+| Site | Observable Framework on GitHub Pages ([site/](site/)): a story page and a BI page | Static, keyless, the lab's showcase skeleton + its own Formula 1 look — [ADR 0007](docs/decisions/0007-observable-framework-for-the-dashboard.md), [0008](docs/decisions/0008-showcase-site-story-and-bi.md) |
 
 ## Run it
 
@@ -48,6 +48,9 @@ PITWALL_LAKE_URI=.lake make ingest ARGS="--meeting 1255"   # offline: local lake
 GCP access uses Workload Identity Federation: no keys exist. Each GitHub Environment (`dev`, `prod`)
 holds its project, WIF provider and service account as variables — `make gh-vars ENV=…` republishes
 them after `make apply` (the provider name changes after a destroy/apply cycle).
+
+CI builds the site with data exported from the **dev** marts, not from the pull request's own
+throwaway datasets: a PR that adds or changes a report model needs `make transform ENV=dev` first.
 
 On-demand runs: **Actions → pitwall-pipeline → Run workflow**, or
 `gh workflow run pitwall-pipeline.yml -f env=prod -f mode=season -f value=2024`
@@ -79,6 +82,8 @@ December–February off-season): re-enable it from the Actions tab.
 | `fct_undercut_attempts` | an undercut attempt | did pitting first work? |
 | `fct_session_results` | a driver's race result | grid vs finish |
 | `dim_sessions`, `dim_meetings`, `dim_session_drivers` | a race / weekend / driver-in-race | names, dates, teams, colours |
+
+On top of these, eight **report models** (`transform/models/marts/reports/rpt_*`) hold exactly what the site reads — races, results per driver, laps, stints, pit stops, tyre wear, undercuts, neutralised laps — one grain each. `pitwall site-export` copies them to Parquet and nothing else, so a number on the site can always be traced to rows of a tested table ([ADR 0008](docs/decisions/0008-showcase-site-story-and-bi.md)).
 
 Every column is documented in the dbt YAML (`transform/models/`); `dbt docs generate` renders it.
 
