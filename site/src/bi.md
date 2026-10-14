@@ -338,9 +338,9 @@ const qualityTable = Inputs.table(qualityRows, {select: false, rows: 14, format:
 <section id="drivers" class="band">
 <div class="wrap">
   <h2><span class="num"><i>D</i></span>Drivers</h2>
-  <p class="sub"><b>Points follow the Session filter</b>: championship totals include Sprints, so choose <b>Both</b> to compare with the official standings. Ten 2023 results that the source scored as zero are filled from the points table (shown on the data-quality table). <b>Places gained</b> is grid position minus finishing position, added up. <b>Pace gap</b> compares the driver's typical clean lap with the whole field's in the same race: negative is faster than the field. Sprint grids are often unpublished, so Sprints add little to the grid columns.</p>
+  <p class="sub"><b>Points follow the Session filter</b>: championship totals include Sprints, so choose <b>Both</b> to compare with the official standings. ${fmt.count(driverRaces.filter((d) => d.is_points_corrected).length)} results that the source scored as zero although the driver finished in the points are filled from the points table (counted on the data-quality table). <b>Places gained</b> is grid position minus finishing position, added up. <b>Pace gap</b> compares the driver's typical clean lap with the whole field's in the same race: negative is faster than the field. Sprint grids are often unpublished, so Sprints add little to the grid columns.</p>
   <div class="panel">
-    <h3>${session === all ? "Championship points" : `${session} points only`} <small>top 15 in this selection · bars in the team's colour${session === all ? "" : " · choose Both for championship totals"}</small></h3>
+    <h3>${session !== all ? `${session} points only` : season !== all && circuit === all ? "Championship points" : "Points"} <small>top 15 in this selection · bars in the team's colour${session === all ? "" : " · choose Both for championship totals"}</small></h3>
     ${resize((width) => pointsChart(width))}
   </div>
   <div class="panel mt">
