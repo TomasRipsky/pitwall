@@ -5,6 +5,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-14
+
+### Changed
+- **The site is a story page and a BI page** ([ADR 0008](docs/decisions/0008-showcase-site-story-and-bi.md)), in the style of the lab's other showcases. The story: the answers on six pit boards, a race explorer with strategy and lap chart, tyres, pit stops, the undercut, grid against finish, a case file chosen by the data, the pipeline as one lap of a circuit, decisions, quality and limits. The BI page: filters by season, session, circuit and team, KPIs, drivers, teams, circuits, tyres, the pit-stop log and data quality by race, with CSV downloads. The four old page URLs redirect to their sections.
+- What the site reads is decided in dbt: eight `rpt_*` report models (one grain each, documented, tested) replace the SQL that lived in `site_data.py`; `pitwall site-export` only copies them.
+
+### Fixed
+- Safety Car periods no longer run to the end of the race when a red flag follows them in 2026 data:
+  the source stopped sending red flags as flags and only reports `SESSION ABORTED`, which the model
+  now reads as a red flag (Monte Carlo, Zandvoort and Monza 2026 were affected — Monza showed 51 of
+  53 laps under the Safety Car). Virtual Safety Car periods announced as `VSC DEPLOYED` / `VSC ENDING`
+  (10 sessions) are recognised. A new warning test lists any Safety Car message the models do not know.
+
 ## [1.0.0] - 2026-10-13
 
 The first release of pitwall as its own repository. Nothing changes in what the pipeline does or shows.

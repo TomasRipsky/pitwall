@@ -1,4 +1,4 @@
-// Original illustrations for the pitwall section (no official F1 imagery or logos).
+// Original illustrations for pitwall (no official F1 imagery or logos).
 import {html, svg} from "npm:htl";
 
 /** Side view of a generic single-seater, wheels painted with soft (rear) and medium (front) sidewalls. */
@@ -7,7 +7,7 @@ export function car({livery = "#e10600"} = {}) {
     <defs>
       <linearGradient id="pw-livery" x1="0" x2="1" y1="0" y2="0">
         <stop offset="0" stop-color="#7a0300"/>
-        <stop offset="0.45" stop-color=${livery}/>
+        <stop offset="0.45" stop-color=${livery} />
         <stop offset="1" stop-color="#ff3b30"/>
       </linearGradient>
       <linearGradient id="pw-speed" x1="0" x2="1">
@@ -42,23 +42,37 @@ export function car({livery = "#e10600"} = {}) {
   </svg>`;
 }
 
-/** Chequered flag strip, used as a section divider. */
-export function chequered({columns = 24, rows = 2, cell = 10} = {}) {
-  const cells = [];
-  for (let r = 0; r < rows; ++r) for (let c = 0; c < columns; ++c) if ((r + c) % 2 === 0) cells.push([c, r]);
-  return svg`<svg width=${columns * cell} height=${rows * cell} role="img" aria-label="Chequered flag">
-    <rect width=${columns * cell} height=${rows * cell} fill="#f0f0f0"/>
-    ${cells.map(([c, r]) => svg`<rect x=${c * cell} y=${r * cell} width=${cell} height=${cell} fill="#0b0b10"/>`)}
+/** The brand mark: a tyre seen from the side, soft-compound red. */
+export function logo(size = 26) {
+  return svg`<svg viewBox="0 0 32 32" width=${size} height=${size} aria-hidden="true">
+    <circle cx="16" cy="16" r="15" fill="#0b0b10"/>
+    <circle cx="16" cy="16" r="10.5" fill="none" stroke="#e10600" stroke-width="3.6"/>
+    <circle cx="16" cy="16" r="4" fill="#f0f0f0"/>
   </svg>`;
 }
 
-/** The pipeline drawn as a lap: each stage is a sector, the site is the chequered flag. */
+/** Five start lights: they come on one by one and go out together (CSS animation). */
+export function startLights() {
+  return html`<div class="lights" role="img" aria-label="Five red start lights"><i></i><i></i><i></i><i></i><i></i></div>`;
+}
+
+/** The pipeline drawn as one lap of a circuit: each stage is a sector marker on the track.
+ * Wide screens get the drawing; narrow ones the same stages as a list (the text would be unreadable). */
 export function pipelineLap(stages) {
-  return html`<ol class="pw-lap">${stages.map(
-    ([name, detail], i) => html`<li>
-      <span class="pw-sector">${i === stages.length - 1 ? chequered({columns: 4, rows: 2, cell: 6}) : `S${i + 1}`}</span>
-      <strong>${name}</strong>
-      <small>${detail}</small>
-    </li>`
-  )}</ol>`;
+  // marker positions along the track outline below, clockwise from the start line
+  const at = [[250, 350], [520, 350], [790, 350], [900, 215], [690, 80], [330, 80], [100, 215]];
+  const label = [[0, 44, "middle"], [0, 44, "middle"], [0, 44, "middle"], [-30, -4, "end"], [0, -30, "middle"], [0, -30, "middle"], [30, -4, "start"]];
+  const track = "M150 350 H820 Q900 350 900 270 V160 Q900 80 820 80 H560 L505 118 L450 80 H180 Q100 80 100 160 V270 Q100 350 180 350 Z";
+  return html`<svg class="circuit" viewBox="0 0 1000 430" aria-hidden="true">
+    <path class="tarmac" d=${track} />
+    <path class="kerbs" d="M820 350 Q900 350 900 270 M900 160 Q900 80 820 80 M180 80 Q100 80 100 160 M100 270 Q100 350 180 350"/>
+    <path class="centre" d=${track} />
+    <g transform="translate(150 335)">${[0, 1, 2, 3].flatMap((c) => [0, 1, 2].map((r) => svg`<rect x=${c * 7} y=${r * 10} width="7" height="10" fill=${(c + r) % 2 ? "#0b0b10" : "#f0f0f0"} />`))}</g>
+    ${stages.map(([name, detail], i) => svg`<g transform="translate(${at[i][0]} ${at[i][1]})">
+      <circle class="stop" r="15"/><text class="sector" y="4.5">${i + 1}</text>
+      <text x=${label[i][0]} y=${label[i][1]} text-anchor=${label[i][2]}>${name}</text>
+      <text class="small" x=${label[i][0]} y=${label[i][1] + 17} text-anchor=${label[i][2]}>${detail}</text>
+    </g>`)}
+  </svg>
+  <ol class="pw-lap" aria-label="The pipeline, stage by stage">${stages.map(([name, detail], i) => html`<li><span class="pw-sector">${i + 1}</span><strong>${name}</strong><small>${detail}</small></li>`)}</ol>`;
 }

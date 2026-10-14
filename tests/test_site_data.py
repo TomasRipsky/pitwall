@@ -1,10 +1,13 @@
 import re
+from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
 from pitwall.site_data import QUERIES, browser_friendly, export, query
+
+TRANSFORM = Path(__file__).parent.parent / "transform"
 
 
 class FakeClient:
@@ -55,9 +58,12 @@ def test_export_writes_one_browser_friendly_file_per_query(tmp_path):
     assert all("`p.marts." in sql for sql in client.sql)
 
 
-def test_queries_only_read_marts():
+def test_export_copies_the_report_models_and_nothing_else():
+    # The SQL lives in dbt (tested, documented, one grain each); the export is a plain copy.
     assert set(QUERIES) == {
         "races",
+        "driver_races",
+        "laps",
         "stints",
         "pit_stops",
         "tyre_wear",
@@ -65,20 +71,20 @@ def test_queries_only_read_marts():
         "neutralisations",
     }
     for name, sql in QUERIES.items():
-        tables = re.findall(r"`([^`]+)`", sql)
-        assert tables and all(t.startswith("{project}.marts.") for t in tables), name
-        assert not re.search(r"\b(insert|update|delete|merge|create|drop)\b", sql, re.I), name
+        assert sql == f"select * from `{{project}}.marts.rpt_{name}`", name
+        assert (TRANSFORM / "models/marts/reports" / f"rpt_{name}.sql").is_file(), name
 
 
 def test_tyre_wear_offers_a_fuel_corrected_curve():
-    # Cars get ~FUEL_S_PER_LAP faster each lap as fuel burns: the corrected curve adds it back.
-    from pitwall.site_data import FUEL_S_PER_LAP
-
-    assert 0.03 <= FUEL_S_PER_LAP <= 0.06
-    sql = QUERIES["tyre_wear"]
-    assert f"(l.lap_time_s + {FUEL_S_PER_LAP} * l.lap_number)" in sql
-    assert "median_delta_fuel_corrected_s" in sql
-    assert "__FUEL__" not in sql
+    # Cars get faster each lap as fuel burns: the corrected curve adds that back. The assumption
+    # is one dbt variable, used by the model and published with the data.
+    project = (TRANSFORM / "dbt_project.yml").read_text()
+    fuel = float(re.search(r"^  fuel_s_per_lap: ([0-9.]+)$", project, re.M).group(1))
+    assert 0.03 <= fuel <= 0.06
+    model = (TRANSFORM / "models/marts/reports/rpt_tyre_wear.sql").read_text()
+    assert "{{ var('fuel_s_per_lap') }} * laps.lap_number" in model
+    assert "median_delta_fuel_corrected_s" in model
+    assert "as fuel_s_per_lap" in model
 
 
 def test_export_refuses_to_publish_an_empty_site(tmp_path):
@@ -86,3 +92,16 @@ def test_export_refuses_to_publish_an_empty_site(tmp_path):
     client = FakeClient(pa.table({"n": pa.array([], pa.int64())}))
     with pytest.raises(ValueError, match="races"):
         export(tmp_path / "data", project="p", client=client)
+
+
+def test_export_refuses_a_site_with_races_but_no_results(tmp_path):
+    # Half an export (a race list without anyone in it) is as broken as an empty one.
+    class Client(FakeClient):
+        def query(self, sql):
+            self.table = pa.table(
+                {"n": pa.array([] if "rpt_driver_races" in sql else [1], pa.int64())}
+            )
+            return super().query(sql)
+
+    with pytest.raises(ValueError, match="driver_races"):
+        export(tmp_path / "data", project="p", client=Client(None))
