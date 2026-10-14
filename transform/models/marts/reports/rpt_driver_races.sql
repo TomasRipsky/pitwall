@@ -68,6 +68,7 @@ select
     results.finish_position,
     results.positions_gained,
     results.points,
+    results.is_points_corrected,
     results.laps_completed,
     case
         when coalesce(results.did_not_start, false) then 'DNS'

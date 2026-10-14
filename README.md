@@ -125,6 +125,7 @@ gcloud projects delete pitwall-tr-dev  # nuclear option: the project itself
 
 ## Decisions and docs
 
+- How it works inside: [docs/guide.md](docs/guide.md).
 - Architecture Decision Records: [docs/decisions/](docs/decisions/). Specs and plans: [docs/design/](docs/design/).
 
 ## Where this comes from

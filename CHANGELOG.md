@@ -5,6 +5,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-10-14
+
+### Added
+- `docs/guide.md`: how pitwall works inside, written during the tutoring (ingestion to CI/CD); a test that every recorded OpenF1 response matches its contract exactly.
+
+### Changed
+- GitHub Actions bumped (download-artifact, upload-artifact, setup-node, setup-uv), each checked with the full CI including the site build.
+
+### Fixed
+- Championship points: OpenF1 gives 0 points to ten classified 2023 finishers (Verstappen, 2nd in Saudi Arabia; positions 2–10 of the United States GP, re-classified after two disqualifications without new points). A classified finisher inside the points table never scores 0, so those results are filled from the table, plus the fastest-lap point where it applied (Races up to 2024). 2023 totals now match the official standings (Verstappen 575). A warning test flags any other disagreement with the points table.
+- The BI page says which points it shows: Races only by default; Both gives the championship totals.
+
 ## [1.1.0] - 2026-10-14
 
 ### Changed
